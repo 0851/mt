@@ -28,7 +28,7 @@ class Monitor extends EventBus {
       this.fps = new Fps(30)
     }
     if (this.errorRecord === true) {
-      this.errorLog = new ErrorLog('asd')
+      this.errorLog = new ErrorLog('asd', 5000)
     }
   }
   plugin (plugin: Monitor.MonitorPlugin) {

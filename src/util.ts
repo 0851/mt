@@ -91,3 +91,17 @@ export function domPaths (dom: Node): IElement[] {
   }
   return res
 }
+
+export function fn2workerURL (fn: Function, ...arg: string[]) {
+  let blob = new Blob([`;(${fn.toString()})(${arg.join(',')})`], {
+    type: 'application/javascript'
+  })
+  return URL.createObjectURL(blob)
+}
+export function makeWorker (fn: Function, ...arg: string[]): Worker | undefined {
+  if (!window.Worker) {
+    return
+  }
+  let worker = new Worker(fn2workerURL(fn, ...arg))
+  return worker
+}

@@ -1,4 +1,4 @@
-import { debounce, domPaths } from './util'
+import { debounce, domPaths, makeWorker } from './util'
 
 const EventsKey = ['Document', 'Element', 'Node', 'FileReader', 'XMLHttpRequest']
 // 重写事件绑定
@@ -24,15 +24,18 @@ export class ErrorLog {
   isAddition: boolean
   uid: string
   trackId: string
+  brokeTime: number
   addEventListeners?: {
     [key in string]: any
   }
-  constructor (uid: string, hasTrack: boolean = true) {
+  constructor (uid: string, brokeTime: number, hasTrack: boolean = true) {
     this.tracks = []
     this.uid = uid
     this.trackId = this.trackIdGenerator()
     this.isAddition = false
+    this.brokeTime = brokeTime
     this.hijack()
+    this.broke()
     if (hasTrack === true) {
       this.recordTrack()
     }
@@ -146,6 +149,47 @@ export class ErrorLog {
       })
     }
   }
+  broke () {
+    let worker = makeWorker(function (this: Worker, brokeTime: any) {
+      let pongTimeout: any
+      let pongTimeoutFn = () => {
+        return setTimeout(function () {
+          console.log('timeout')
+        }, brokeTime)
+      }
+      let sendPing = () => {
+        return setTimeout(() => {
+          this.postMessage({
+            type: 'ping'
+          })
+        }, 1000)
+      }
+      this.addEventListener('message', e => {
+        let data = e.data || {}
+        if (data.type === 'pong') {
+          // console.log('获取pong,清除超时')
+          clearTimeout(pongTimeout)
+          sendPing()
+          pongTimeout = pongTimeoutFn()
+        }
+      })
+      sendPing()
+      pongTimeout = pongTimeoutFn()
+    }, `${this.brokeTime}`)
+    if (!worker) {
+      return
+    }
+    worker.addEventListener('message', e => {
+      if (!worker) return
+      let data = e.data || {}
+      if (data.type === 'ping') {
+        // console.log('获取ping,返回pong')
+        worker.postMessage({
+          type: 'pong'
+        })
+      }
+    })
+  }
   unHijackFn () {
     FnKeys.forEach(function (key: string) {
       let win: any = window
@@ -207,13 +251,13 @@ export class ErrorLog {
       true
     )
     window.addEventListener('error', this.addEventListeners['error'], true)
-    let a = new Promise(function (res, rj) {
-      rj('=====rj===')
-    }).catch(function (e) {
-      console.log(e)
-      throw e
-    })
-    throw new Error('=====错误====')
+    // let a = new Promise(function (res, rj) {
+    //   rj('=====rj===')
+    // }).catch(function (e) {
+    //   console.log(e)
+    //   throw e
+    // })
+    // throw new Error('=====错误====')
   }
   unHijackXmlHttpRequest () {
     XMLHttpRequest.prototype.open = nativeAjaxOpen
