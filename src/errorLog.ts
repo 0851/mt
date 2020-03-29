@@ -8,24 +8,31 @@ const oldEvents: any = EventsKey.reduce((res: any, key: string) => {
   res[key] = (window as any)[key].prototype.addEventListener
   return res
 }, {})
+
 const FnKeys = ['setTimeout', 'setInterval', 'requestAnimationFrame']
 const oldFns: any = FnKeys.reduce((res: any, key: string) => {
   res[key] = (window as any)[key]
   return res
 }, {})
 
+const nativeAjaxSend = XMLHttpRequest.prototype.send
+const nativeAjaxOpen = XMLHttpRequest.prototype.open
+const oldFetch = window.fetch
+
 export class ErrorLog {
   tracks: ITack[]
   isAddition: boolean
   uid: string
   trackId: string
-
+  addEventListeners?: {
+    [key in string]: any
+  }
   constructor (uid: string, hasTrack: boolean = true) {
     this.tracks = []
     this.uid = uid
     this.trackId = this.trackIdGenerator()
     this.isAddition = false
-    this.addition()
+    this.hijack()
     if (hasTrack === true) {
       this.recordTrack()
     }
@@ -53,7 +60,7 @@ export class ErrorLog {
         if (!target) {
           return
         }
-
+        let time = performance.now()
         console.log('==mousemove==', domPaths(target))
       })
     )
@@ -64,6 +71,7 @@ export class ErrorLog {
         if (!target) {
           return
         }
+        let time = performance.now()
         console.log('==click==', domPaths(target))
       })
     )
@@ -74,14 +82,33 @@ export class ErrorLog {
         if (!target) {
           return
         }
+        let time = performance.now()
         console.log('==touchmove==', domPaths(target))
       })
     )
   }
-  reAddition () {
+  unHijack () {
     if (this.isAddition !== true) {
       return
     }
+    this.unHijackError()
+    this.unHijackEvent()
+    this.unHijackFn()
+    this.unHijackXmlHttpRequest()
+    this.unHijackFetch()
+  }
+  hijack () {
+    if (this.isAddition === true) {
+      return
+    }
+    this.hijackError()
+    this.hijackEvent()
+    this.hijackFn()
+    this.hijackXmlHttpRequest()
+    this.hijackFetch()
+    this.isAddition = true
+  }
+  unHijackEvent () {
     if (window.EventTarget) {
       window.EventTarget.prototype.addEventListener = oldEventTargetAddListener
     } else {
@@ -89,22 +116,16 @@ export class ErrorLog {
         let win: any = window
         win[key].prototype.addEventListener = oldEvents[key]
       })
-      FnKeys.forEach(function (key: string) {
-        let win: any = window
-        win[key] = oldFns[key]
-      })
     }
   }
-  addition () {
-    if (this.isAddition === true) {
-      return
-    }
+  hijackEvent () {
     if (window.EventTarget) {
       window.EventTarget.prototype.addEventListener = function (type: string, ...arg) {
         try {
           return oldEventTargetAddListener.call(this, type, ...arg)
         } catch (error) {
-          let stack = new Error(`Event ${type}`).stack
+          let time = performance.now()
+          let stack = new Error(`Event ${type} ${time}`).stack
           error.stack = error.stack + '\n' + stack
           throw error
         }
@@ -116,31 +137,170 @@ export class ErrorLog {
           try {
             return oldEvents[key].call(this, type, ...arg)
           } catch (error) {
-            let stack = new Error(`Event ${type}`).stack
+            let time = performance.now()
+            let stack = new Error(`Event ${type} ${time}`).stack
             error.stack = error.stack + '\n' + stack
             throw error
           }
         }
       })
     }
+  }
+  unHijackFn () {
+    FnKeys.forEach(function (key: string) {
+      let win: any = window
+      win[key] = oldFns[key]
+    })
+  }
+  hijackFn () {
     FnKeys.forEach(function (key: string) {
       let win: any = window
       win[key] = function (...arg: any) {
         try {
           return oldFns[key].call(this, ...arg)
         } catch (error) {
-          let stack = new Error(`re Fn ${key}`).stack
+          let time = performance.now()
+          let stack = new Error(`ReFn ${key} ${time}`).stack
           error.stack = error.stack + '\n' + stack
           throw error
         }
       }
     })
-    window.addEventListener('unhandledrejection', function () {
-      // --
+  }
+  unHijackError () {
+    // --
+    if (!this.addEventListeners) {
+      return
+    }
+    window.removeEventListener(
+      'rejectionhandled',
+      this.addEventListeners['rejectionhandled'],
+      true
+    )
+    window.removeEventListener(
+      'unhandledrejection',
+      this.addEventListeners['unhandledrejection'],
+      true
+    )
+    window.removeEventListener('error', this.addEventListeners['error'], true)
+  }
+  hijackError () {
+    //  --
+    this.addEventListeners = this.addEventListeners || {}
+    this.addEventListeners['rejectionhandled'] = function (e: PromiseRejectionEvent) {
+      console.log(arguments, '===rejectionhandled===')
+    }
+    this.addEventListeners['unhandledrejection'] = function (e: PromiseRejectionEvent) {
+      console.log(arguments, '===unhandledrejection===')
+    }
+    this.addEventListeners['error'] = function (e: ErrorEvent) {
+      console.log(arguments, '===error===')
+    }
+    window.addEventListener(
+      'rejectionhandled',
+      this.addEventListeners['rejectionhandled'],
+      true
+    )
+    window.addEventListener(
+      'unhandledrejection',
+      this.addEventListeners['unhandledrejection'],
+      true
+    )
+    window.addEventListener('error', this.addEventListeners['error'], true)
+    let a = new Promise(function (res, rj) {
+      rj('=====rj===')
+    }).catch(function (e) {
+      console.log(e)
+      throw e
     })
-    window.addEventListener('error', function () {
-      // --
-    })
-    this.isAddition = true
+    throw new Error('=====错误====')
+  }
+  unHijackXmlHttpRequest () {
+    XMLHttpRequest.prototype.open = nativeAjaxOpen
+    XMLHttpRequest.prototype.send = nativeAjaxSend
+  }
+  unHijackFetch () {
+    if (!oldFetch) {
+      return
+    }
+    window.fetch = oldFetch
+  }
+  hijackFetch () {
+    if (!oldFetch) {
+      return
+    }
+    window.fetch = function (...arg) {
+      return oldFetch
+        .call(this, ...arg)
+        .then(res => {
+          if (!res.ok) {
+            // True if status is HTTP 2xx
+            // 上报错误
+          }
+          return res
+        })
+        .catch(error => {
+          // 上报错误
+          throw error
+        })
+    }
+  }
+  hijackXmlHttpRequest () {
+    if (!XMLHttpRequest) {
+      return
+    }
+    XMLHttpRequest.prototype.open = function (
+      mothod: string,
+      url: string,
+      async?: boolean,
+      username?: string | null,
+      password?: string | null
+    ) {
+      const xhrInstance: any = this
+      xhrInstance._url = url
+      return nativeAjaxOpen.call(this, mothod, url, async as any, username, password)
+    }
+
+    XMLHttpRequest.prototype.send = function (...args) {
+      const oldCb = this.onreadystatechange
+      const xhrInstance: any = this
+
+      xhrInstance.addEventListener('error', function (e: any) {
+        const errorObj = {
+          ...e,
+          error_msg: 'ajax filed',
+          error_stack: JSON.stringify({
+            status: e.target.status,
+            statusText: e.target.statusText
+          }),
+          error_native: e
+        }
+      })
+
+      xhrInstance.addEventListener('abort', function (e: any) {
+        if (e.type === 'abort') {
+          xhrInstance._isAbort = true
+        }
+      })
+
+      this.onreadystatechange = function (...innerArgs) {
+        if (xhrInstance.readyState === 4) {
+          if (!xhrInstance._isAbort && xhrInstance.status !== 200) {
+            // 请求不成功时，拿到错误信息
+            const errorObj = {
+              error_msg: JSON.stringify({
+                code: xhrInstance.status,
+                msg: xhrInstance.statusText,
+                url: xhrInstance._url
+              }),
+              error_stack: '',
+              error_native: xhrInstance
+            }
+          }
+        }
+        oldCb && oldCb.apply(this, innerArgs)
+      }
+      return nativeAjaxSend.apply(this, args)
+    }
   }
 }
