@@ -1,4 +1,4 @@
-import { debounce } from './util'
+import { debounce, domPaths } from './util'
 
 const EventsKey = ['Document', 'Element', 'Node', 'FileReader', 'XMLHttpRequest']
 // 重写事件绑定
@@ -14,40 +14,6 @@ const oldFns: any = FnKeys.reduce((res: any, key: string) => {
   return res
 }, {})
 
-export interface ITack {
-  // 收集时间
-  time: number
-  // 用户代理
-  userAgent: string
-  // 网络状态
-  online: boolean
-  // 平台
-  platform: string
-  // 语言
-  language: string
-  // 鼠标所在位置
-  x: number
-  y: number
-  // 页面宽度
-  pageWidth: number
-  // 页面高度
-  pageHeight: number
-  // 屏幕宽度
-  screenWidth: number
-  // 屏幕高度
-  screenHeight: number
-  // 所在页面地址
-  uri: string
-  // 来源地址
-  referer?: string
-  target: {
-    tag: string
-    className?: string
-    id?: string
-    attr?: string
-  }
-  paths: []
-}
 export class ErrorLog {
   tracks: ITack[]
   isAddition: boolean
@@ -82,20 +48,33 @@ export class ErrorLog {
   recordTrack () {
     window.addEventListener(
       'mousemove',
-      debounce(function (e) {
-        console.log('==mousemove==', e)
+      debounce(function (e: Event) {
+        let target = (e.srcElement || e.target) as Node
+        if (!target) {
+          return
+        }
+
+        console.log('==mousemove==', domPaths(target))
       })
     )
     window.addEventListener(
       'click',
       debounce(function (e) {
-        console.log('==click==', e)
+        let target = (e.srcElement || e.target) as Node
+        if (!target) {
+          return
+        }
+        console.log('==click==', domPaths(target))
       })
     )
     window.addEventListener(
       'touchmove',
       debounce(function (e) {
-        console.log('==touchmove==', e)
+        let target = (e.srcElement || e.target) as Node
+        if (!target) {
+          return
+        }
+        console.log('==touchmove==', domPaths(target))
       })
     )
   }

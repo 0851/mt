@@ -8,9 +8,8 @@ class MonitorPanel extends EventBus implements Monitor.MonitorPlugin {
     // --
   }
   apply (monitor: Monitor): void {
-    console.log(monitor.performances,'=====+======')
-    this.render()
-    this.toggleTitle()
+    // this.render()
+    // this.toggleTitle()
   }
   private render (): void {
     let content = document.createElement('div')

@@ -20,7 +20,8 @@
   "files": [
     "@types/module.d.ts",
     "@types/mtsdk.d.ts",
-    "@types/mtsdk-panel.d.ts"
+    "@types/mtsdk-panel.d.ts",
+    "@types/types.d.ts"
   ],
   "include": [
     "**/*.ts"

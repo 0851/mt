@@ -61,3 +61,33 @@ export function debounce (
   }
   return debounced
 }
+
+export function domPaths (dom: Node): IElement[] {
+  let stack = [dom]
+  let res: IElement[] = []
+  while (stack.length > 0) {
+    let d = stack.shift()
+    if (!d) {
+      break
+    }
+    let el = d as Element
+    let tag = el.tagName || el.nodeName
+    let id = el.id
+    let className = el.className
+    let attr = Object.keys(el.attributes || {}).reduce((res: any, key: any) => {
+      let item = el.attributes[key]
+      res.push(`${item.name}:${item.value}`)
+      return res
+    }, [])
+    res.push({
+      tag: tag,
+      className: className,
+      id: id,
+      attr: attr.join(';')
+    })
+    if (d.parentNode) {
+      stack.push(d.parentNode)
+    }
+  }
+  return res
+}
