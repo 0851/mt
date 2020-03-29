@@ -1,5 +1,8 @@
-import { subtraction, addition, setLocalStore, Fps } from './src/util'
+import { subtraction } from './src/util'
+import { Fps } from './src/fps'
+import { setLocalStore } from './src/store'
 import EventBus from './src/event'
+import { ErrorLog } from './src/errorLog'
 
 const PLUGIN_START = 'plugin:start'
 const PLUGIN_END = 'plugin:end'
@@ -13,6 +16,7 @@ class Monitor extends EventBus {
   performances?: Monitor.IPerformance[]
   plugins: Monitor.MonitorPlugin[]
   fps?: Fps
+  errorLog?: ErrorLog
   constructor (config: Monitor.IConfig) {
     super()
     this.interval = config.interval || 10
@@ -20,9 +24,11 @@ class Monitor extends EventBus {
     this.fpsRecord = config.fpsRecord !== undefined ? config.fpsRecord : true
     this.plugins = []
     this.getPerformance()
-    addition()
     if (this.fpsRecord === true) {
       this.fps = new Fps(30)
+    }
+    if (this.errorRecord === true) {
+      this.errorLog = new ErrorLog('asd')
     }
   }
   plugin (plugin: Monitor.MonitorPlugin) {
