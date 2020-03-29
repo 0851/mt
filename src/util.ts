@@ -16,11 +16,15 @@ export function debounce (
 ) {
   let timeout: number | null
   let result: any
+  let stop = false
 
   let debounced: any = function (this: any, ...args: any) {
     let context = this
     if (timeout) {
       window.clearTimeout(timeout)
+    }
+    if (stop === true) {
+      return
     }
     if (immediate) {
       // 如果已经执行过，不再执行
@@ -32,7 +36,7 @@ export function debounce (
         timeout = null
       }, wait)
       if (callNow) {
-        return func.call(context, ...args)
+        result = func.call(context, ...args)
       }
     } else {
       timeout = window.setTimeout(function () {
@@ -48,6 +52,12 @@ export function debounce (
     }
     timeout = null
   }
-
+  debounced.stop = function () {
+    if (timeout) {
+      window.clearTimeout(timeout)
+    }
+    timeout = null
+    stop = true
+  }
   return debounced
 }
