@@ -280,7 +280,7 @@ export class ErrorLog {
         let tracks: any = []
         let pongTimeoutFn = () => {
           return setTimeout(function () {
-            request('post', obj.url, {
+            request('post', `${obj.url}?d=${Math.random()}`, {
               type: 'crash',
               uid: obj.uid,
               data: JSON.stringify({

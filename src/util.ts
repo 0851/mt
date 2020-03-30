@@ -101,25 +101,9 @@ export function request (
   callback?: any,
   failed?: any
 ) {
-  function createCORSRequest (method: string, url: string): XMLHttpRequest | null {
-    let xhr2: XMLHttpRequest | null = new XMLHttpRequest()
-    if ('withCredentials' in xhr2) {
-      xhr2.open(method, url, false)
-    } else if (typeof (window as any).XDomainRequest !== 'undefined') {
-      xhr2 = new (window as any).XDomainRequest() as XMLHttpRequest
-      xhr2.open(method, url)
-    } else {
-      xhr2 = null
-    }
-    return xhr2
-  }
   let xhr = new XMLHttpRequest()
-  // let xhr = createCORSRequest(method, url)
+  xhr.withCredentials = true
   xhr.open(method, url, true)
-  xhr.withCredentials = false
-  if (!xhr) {
-    throw new Error('CORS not supported')
-  }
   xhr.onreadystatechange = () => {
     try {
       if (!xhr) {
@@ -138,12 +122,12 @@ export function request (
     }
   }
   xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8')
-  // xhr.setRequestHeader('Access-Control-Allow-Origin', '*')
   if (method.toLowerCase() === 'get') {
     xhr.send(null)
   }
   if (method.toLowerCase() === 'post') {
-    xhr.send(JSON.stringify(data))
+    let p = JSON.stringify(data)
+    xhr.send(p)
   }
 }
 
@@ -198,19 +182,29 @@ export function makeIframe (fn: Function, ...arg: string[]): Window | null {
 let worker = makeWorker(function () {
   addEventListener('message', function (e) {
     let data = e.data || {}
-    request('post', data.url, data)
+    request('post', `${data.url}?d=${Math.random()}`, data)
   })
 })
+
+// let worker = new Worker('./work.js')
+// let userAgent = navigator.userAgent
+// let isIE = 'ActiveXObject' in window
+// let isEdge = userAgent.indexOf('Edge') > -1
+
 export function report (url: string, uid: string, type: string, data: any) {
-  if (!worker) {
-    return
-  }
-  worker.postMessage({
-    type: type,
-    uid: uid,
-    url: url,
-    data: JSON.stringify(data)
-  })
+  setTimeout(function () {
+    let payload = {
+      type: type,
+      uid: uid,
+      url: url,
+      data: JSON.stringify(data)
+    }
+    console.log(type, 'report type')
+    if (!worker) {
+      return
+    }
+    worker.postMessage(payload)
+  }, 1000)
 }
 export function isFunction (f: any): f is Function {
   return f instanceof Function
