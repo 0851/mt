@@ -1,13 +1,11 @@
-import { subtraction } from './src/util'
+import { subtraction, makeWorker, report } from './src/util'
 import { Fps } from './src/fps'
 import { setLocalStore } from './src/store'
 import EventBus from './src/event'
 import { ErrorLog } from './src/errorLog'
 
-const PLUGIN_START = 'plugin:start'
-const PLUGIN_END = 'plugin:end'
-const PLUGIN_REMOVE = 'plugin:remove'
-const PLUGIN_REMOVED = 'plugin:removed'
+const PLUGIN_START = 'plugin:mount'
+const PLUGIN_END = 'plugin:mounted'
 
 class Monitor extends EventBus {
   interval: number
@@ -16,19 +14,39 @@ class Monitor extends EventBus {
   performances?: Monitor.IPerformance[]
   plugins: Monitor.MonitorPlugin[]
   fps?: Fps
+  uid: string
+  report?: string
   errorLog?: ErrorLog
+  logsMax: number
+  fpsCount: number
+  tracksMax: number
+  errorDelay: number
+  logs: any[]
   constructor (config: Monitor.IConfig) {
     super()
     this.interval = config.interval || 10
     this.errorRecord = config.errorRecord !== undefined ? config.errorRecord : true
     this.fpsRecord = config.fpsRecord !== undefined ? config.fpsRecord : true
+    this.report = config.report
     this.plugins = []
+    this.logs = []
+    this.uid = config.uid
+    this.errorDelay = config.errorDelay
+    this.tracksMax = config.tracksMax
+    this.fpsCount = config.fpsCount
+    this.logsMax = config.logsMax
     this.getPerformance()
     if (this.fpsRecord === true) {
-      this.fps = new Fps(30)
+      this.fps = new Fps(config.fpsCount)
     }
     if (this.errorRecord === true) {
-      this.errorLog = new ErrorLog('asd', 5000)
+      this.errorLog = new ErrorLog(
+        config.uid,
+        config.report,
+        config.errorDelay,
+        config.tracksMax,
+        config.logsMax
+      )
     }
   }
   plugin (plugin: Monitor.MonitorPlugin) {
@@ -51,6 +69,15 @@ class Monitor extends EventBus {
       size: item.transferSize,
       timing: item
     }
+  }
+  reportFps () {
+    setTimeout(() => {
+      if (!this.fps || !this.report) {
+        return
+      }
+      report(this.report, this.uid, 'fps', this.fps.lists)
+      this.reportFps()
+    }, 10000)
   }
   getPerformance (): void {
     let performance = window.performance
@@ -82,6 +109,10 @@ class Monitor extends EventBus {
         timing: timing
       }
       this.performances = setLocalStore(perf, this.interval)
+      if (!this.report) {
+        return
+      }
+      report(this.report, this.uid, 'performance', perf)
     }
   }
 }

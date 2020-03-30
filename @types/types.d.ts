@@ -5,6 +5,7 @@ interface IElement {
   attr?: string
 }
 interface ITack {
+  eventType: string
   // 收集时间
   time: number
   // 用户代理
@@ -16,12 +17,18 @@ interface ITack {
   // 语言
   language: string
   // 鼠标所在位置
-  x: number
-  y: number
+  offsetX: number
+  offsetY: number
+  screenX: number
+  screenY: number
+  scrollX: number
+  scrollY: number
   // 页面宽度
   pageWidth: number
   // 页面高度
   pageHeight: number
+  windowWidth: number
+  windowHeight: number
   // 屏幕宽度
   screenWidth: number
   // 屏幕高度

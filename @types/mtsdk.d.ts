@@ -5,6 +5,11 @@ export = Monitor
 declare class Monitor extends EventBus {
   constructor(config: Monitor.IConfig)
   interval: number
+  uid: string
+  logsMax: number
+  fpsCount: number
+  tracksMax: number
+  errorDelay: number
   errorRecord: boolean
   fpsRecord: boolean
   fps?: {
@@ -17,6 +22,12 @@ declare class Monitor extends EventBus {
 declare namespace Monitor {
   export interface IConfig {
     interval?: number
+    report?: string
+    uid: string
+    logsMax: number
+    fpsCount: number
+    tracksMax: number
+    errorDelay: number
     errorRecord?: boolean
     fpsRecord?: boolean
   }
