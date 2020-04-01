@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ksr dev -e index.html -p 8991 -h 0.0.0.0 --static ./",
-    "build": "npm run build-main && npm run build-plugin",
+    "build": "rm -rf dist && npm run build-index && npm run build-main && npm run build-panel",
+    "build-index":"ksr build -e index.html:path=test/index.html --min false",
     "build-main":"ksr build -e mtsdk.ts:path=mtsdk --hash false --library mtsdk --target umd",
     "build-panel": "ksr build -e mtsdk-panel.ts:path=mtsdkpanel --hash false --library mtsdkpanel --target umd",
     "fix-lint": "tslint -p tsconfig.json --fix",
@@ -15,7 +16,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "ksr": "^3.8.3",
+    "ksr": "^3.8.5",
     "tslint": "^6.1.0",
     "tslint-config-standard": "^9.0.0"
   }

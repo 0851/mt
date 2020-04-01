@@ -98,36 +98,65 @@ export function request (
   method: string,
   url: string,
   data: any,
+  tryAgain: number,
   callback?: any,
   failed?: any
 ) {
-  let xhr = new XMLHttpRequest()
-  xhr.withCredentials = true
-  xhr.open(method, url, true)
-  xhr.onreadystatechange = () => {
-    try {
-      if (!xhr) {
-        return
-      }
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          let res = JSON.parse(xhr.responseText)
-          callback && callback(res)
-        } else {
-          failed && failed(xhr.status)
-        }
-      }
-    } catch (error) {
-      console.error(error)
+  try {
+    let xhr = new XMLHttpRequest()
+    let xhrInstance: any = xhr
+    xhrInstance.stopLog && xhrInstance.stopLog()
+    if (tryAgain > 0) {
+      xhr.addEventListener('error', function (e: any) {
+        setTimeout(() => {
+          let time = new Date().getTime()
+          data.tryTime = time
+          data.tryStatus = xhr.status
+          data.tryStatusText = xhr.status
+          data.tryEvent = e
+          data.tryMessage = e.message
+          data.tryStack = e.stack
+          request(method, url, data, tryAgain--)
+        }, 1000)
+      })
     }
-  }
-  xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8')
-  if (method.toLowerCase() === 'get') {
-    xhr.send(null)
-  }
-  if (method.toLowerCase() === 'post') {
-    let p = JSON.stringify(data)
-    xhr.send(p)
+    xhr.withCredentials = true
+    xhr.open(method, url, true)
+    xhr.timeout = 10
+    xhr.onreadystatechange = e => {
+      try {
+        if (!xhr) {
+          return
+        }
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            let res = JSON.parse(xhr.responseText)
+            callback && callback(res)
+          } else {
+            failed && failed(xhr.status)
+            setTimeout(() => {
+              let time = new Date().getTime()
+              data.tryTime = time
+              data.tryStatus = xhr.status
+              data.tryStatusText = xhr.status
+              request(method, url, data, tryAgain--)
+            }, 1000)
+          }
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8')
+    if (method.toLowerCase() === 'get') {
+      xhr.send(null)
+    }
+    if (method.toLowerCase() === 'post') {
+      let p = JSON.stringify(data)
+      xhr.send(p)
+    }
+  } catch (error) {
+    console.error('request', error)
   }
 }
 
@@ -141,11 +170,21 @@ export function fn2workerURL (fn: Function, obj?: object) {
     console.log('worker exec error', e)
   }
   `
-  let blob = new Blob([fns], {
-    type: 'application/javascript'
-  })
-  return URL.createObjectURL(blob)
+  let blob
+  try {
+    blob = new Blob([fns], { type: 'application/javascript' })
+  } catch (e) {
+    let win = window as any
+    let blobBuilder = new (win.BlobBuilder ||
+      win.WebKitBlobBuilder ||
+      win.MozBlobBuilder)()
+    blobBuilder.append(fns)
+    blob = blobBuilder.getBlob('application/javascript')
+  }
+  let url = window.URL || window.webkitURL
+  return url.createObjectURL(blob)
 }
+
 export function makeWorker (fn: Function, obj?: object): Worker | undefined {
   if (!window.Worker) {
     return
@@ -154,7 +193,6 @@ export function makeWorker (fn: Function, obj?: object): Worker | undefined {
   try {
     let worker = new window.Worker(blob)
     worker.addEventListener('error', function (event) {
-      event.preventDefault()
       console.error(`worker error`, event)
     })
     return worker
@@ -182,7 +220,7 @@ export function makeIframe (fn: Function, ...arg: string[]): Window | null {
 let worker = makeWorker(function () {
   addEventListener('message', function (e) {
     let data = e.data || {}
-    request('post', `${data.url}?d=${Math.random()}`, data)
+    request('post', `${data.url}?d=${Math.random()}`, data, 3)
   })
 })
 
@@ -199,13 +237,22 @@ export function report (url: string, uid: string, type: string, data: any) {
       url: url,
       data: JSON.stringify(data)
     }
-    console.log(type, 'report type')
     if (!worker) {
+      console.log(type, 'request report type', payload)
+      request('post', `${payload.url}?d=${Math.random()}`, payload, 3)
       return
     }
+    console.log(type, 'worker report type', payload)
     worker.postMessage(payload)
   }, 1000)
 }
 export function isFunction (f: any): f is Function {
   return f instanceof Function
+}
+export function getTime (): number {
+  let d = new Date().getTime()
+  if (window.performance && typeof window.performance.now === 'function') {
+    d += performance.now()
+  }
+  return d
 }

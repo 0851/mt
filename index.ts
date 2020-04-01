@@ -9,7 +9,6 @@ let monitor = new mtsdk({
   errorDelay: 5000,
   tracksMax: 1000
 })
-
 let panel = new mtsdkpanel()
 panel.on('plugin:start', (content: any) => {
   console.log(content)
@@ -20,15 +19,13 @@ panel.on('plugin:end', (content: any) => {
 monitor.plugin(panel)
 monitor.run()
 function sdd () {
-  (console as any).sdd('click error')
+  throw new Error('====click error===')
 }
+window.addEventListener('click', sdd)
 setTimeout(function () {
-  window.addEventListener('click', sdd)
-  // setTimeout(function () {
-  //   window.removeEventListener('click', sdd)
-  // }, 5000)
+  // window.removeEventListener('click', sdd)
   let a = new Promise(function (res, rj) {
     rj('promise error')
   })
-  throw Error('window Error')
+  throw Error('throw window Error')
 }, 5000)

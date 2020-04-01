@@ -1,3 +1,6 @@
+import 'core-js/es6/weak-map'
+import 'core-js/es6/map'
+
 import { subtraction, makeWorker, report } from './src/util'
 import { Fps } from './src/fps'
 import { setLocalStore } from './src/store'
@@ -35,18 +38,22 @@ class Monitor extends EventBus {
     this.tracksMax = config.tracksMax
     this.fpsCount = config.fpsCount
     this.logsMax = config.logsMax
-    this.getPerformance()
-    if (this.fpsRecord === true) {
-      this.fps = new Fps(config.fpsCount)
-    }
-    if (this.errorRecord === true) {
-      this.errorLog = new ErrorLog(
-        config.uid,
-        config.report,
-        config.errorDelay,
-        config.tracksMax,
-        config.logsMax
-      )
+    try {
+      this.getPerformance()
+      if (this.fpsRecord === true) {
+        this.fps = new Fps(config.fpsCount)
+      }
+      if (this.errorRecord === true) {
+        this.errorLog = new ErrorLog(
+          config.uid,
+          config.report,
+          config.errorDelay,
+          config.tracksMax,
+          config.logsMax
+        )
+      }
+    } catch (error) {
+      console.error('monitor error', error)
     }
   }
   plugin (plugin: Monitor.MonitorPlugin) {

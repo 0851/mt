@@ -5,53 +5,21 @@ import {
   makeWorker,
   report,
   request,
+  getTime,
   isFunction
 } from './util'
 
-const EventsKey = ['Document', 'Element', 'Node', 'FileReader']
-// 重写事件绑定
-const EventTargetPrototype = (window.EventTarget || {}).prototype || {}
-const oldEventTargetAddListener = EventTargetPrototype.addEventListener
-const oldEventTargetRemoveEventListener = EventTargetPrototype.removeEventListener
-
-const oldEvents: any = EventsKey.reduce((res: any, key: string) => {
-  let win = (window as any)[key]
-  res[key] = {
-    addEventListener: win.prototype.addEventListener,
-    removeEventListener: win.prototype.removeEventListener
-  }
-  return res
-}, {})
-
-let oldWinEvents = {
-  addEventListener: window.addEventListener,
-  removeEventListener: window.removeEventListener
-}
-
-const FnKeys = ['setTimeout', 'setInterval', 'requestAnimationFrame']
-const oldFns: any = FnKeys.reduce((res: any, key: string) => {
-  res[key] = (window as any)[key]
-  return res
-}, {})
-
-const nativeAjaxSend = XMLHttpRequest.prototype.send
-const nativeAjaxOpen = XMLHttpRequest.prototype.open
-const oldFetch = window.fetch
-
 export class ErrorLog {
-  tracks: ITack[]
-  isAddition: boolean
-  uid: string
-  trackId: string
-  brokeTime: number
-  tracksMax: number
-  logs: any[]
-  logsMax: number
+  tracks: ITack[] = []
+  uid: string = ''
+  trackId: string = ''
+  brokeTime: number = 5000
+  tracksMax: number = 1000
+  logs: any[] = []
+  logsMax: number = 100
   url: string | undefined
-  addEventListeners?: {
-    [key in string]: any
-  }
-  eventWeakMap: WeakMap<any, any>
+  native: any
+  worker?: Worker
   constructor (
     uid: string,
     url: string | undefined,
@@ -60,31 +28,110 @@ export class ErrorLog {
     logsMax: number,
     hasTrack: boolean = true
   ) {
-    this.tracks = []
-    this.logs = []
-    this.logsMax = logsMax
-    this.uid = uid
-    this.url = url
-    this.trackId = this.trackIdGenerator()
-    this.isAddition = false
-    this.brokeTime = brokeTime
-    this.tracksMax = tracksMax
-    this.eventWeakMap = new WeakMap()
-    this.hijack()
-    this.broke()
-    if (hasTrack === true) {
-      this.recordTrack()
+    try {
+      this.tracks = []
+      this.logs = []
+      this.logsMax = logsMax
+      this.uid = uid
+      this.url = url
+      this.trackId = this.trackIdGenerator()
+      this.brokeTime = brokeTime
+      this.tracksMax = tracksMax
+      this.native = this.native || {}
+      this.hijack()
+      this.broke()
+      if (hasTrack === true) {
+        this.recordTrack()
+      }
+    } catch (error) {
+      console.error(`error log`, error)
     }
   }
+  broke () {
+    let self = this
+    if (self.worker) {
+      return
+    }
+    self.worker = makeWorker(
+      function (
+        this: Worker,
+        obj: { brokeTime: any; url: string; uid: string; href: string; trackId: string }
+      ) {
+        let pongTimeout: any
+        let tracks: any = []
+        let pongTimeoutFn = () => {
+          return setTimeout(function () {
+            request(
+              'post',
+              `${obj.url}?d=${Math.random()}`,
+              {
+                type: 'crash',
+                uid: obj.uid,
+                data: JSON.stringify({
+                  href: obj.href,
+                  trackId: obj.trackId,
+                  tracks: tracks
+                })
+              },
+              3
+            )
+          }, obj.brokeTime)
+        }
+        let sendPing = () => {
+          return setTimeout(() => {
+            this.postMessage({
+              type: 'ping'
+            })
+          }, 2000)
+        }
+        addEventListener('message', e => {
+          let data = e.data || {}
+          if (data.type === 'pong') {
+            tracks = data.tracks
+            // console.log('获取pong, 清除超时')
+            clearTimeout(pongTimeout)
+            sendPing()
+            pongTimeout = pongTimeoutFn()
+          }
+        })
+        sendPing()
+        pongTimeout = pongTimeoutFn()
+      },
+      {
+        brokeTime: this.brokeTime,
+        url: this.url,
+        uid: this.uid,
+        trackId: this.trackId,
+        href: window.location.href
+      }
+    )
+    if (!self.worker) return
+    self.worker.addEventListener('message', e => {
+      try {
+        if (!self.worker) return
+        let data = e.data || {}
+        if (data.type === 'ping') {
+          let tracks = self.tracks.slice(
+            Math.max(0, self.tracks.length - 50),
+            self.tracks.length
+          )
+          // console.log('获取ping, 返回pong')
+          self.worker.postMessage({
+            type: 'pong',
+            tracks: tracks
+          })
+        }
+      } catch (error) {
+        console.error('worker message error', error)
+      }
+    })
+  }
   getTime () {
-    let d = new Date().getTime()
+    let d = getTime()
     return d
   }
   trackIdGenerator () {
-    let d = new Date().getTime()
-    if (window.performance && typeof window.performance.now === 'function') {
-      d += performance.now()
-    }
+    let d = getTime()
     let uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       let r = (d + Math.random() * 16) % 16 | 0
       d = Math.floor(d / 16)
@@ -131,350 +178,330 @@ export class ErrorLog {
     let self = this
     function mouseEventHandler (type: string) {
       return function (e: MouseEvent) {
-        let target = (e.srcElement || e.target) as Node
-        if (!target) {
-          return
+        try {
+          let target = (e.srcElement || e.target) as Node
+          if (!target) {
+            return
+          }
+          let time = self.getTime()
+          self.addTrack({
+            eventType: type,
+            time: time,
+            userAgent: navigator.userAgent,
+            online: navigator.onLine,
+            platform: navigator.platform,
+            language: navigator.language,
+            offsetX: e.offsetX,
+            offsetY: e.offsetY,
+            screenX: e.screenX,
+            screenY: e.screenY,
+            scrollX: window.scrollX,
+            scrollY: window.screenY,
+            pageWidth: document.body.clientWidth,
+            pageHeight: document.body.clientHeight,
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            uri: location.href,
+            referer: document.referrer,
+            target: getEl(target),
+            paths: domPaths(target)
+          })
+        } catch (error) {
+          console.error(`mouseEventHandler ${type} error`, error)
         }
-        let time = self.getTime()
-        self.addTrack({
-          eventType: type,
-          time: time,
-          userAgent: navigator.userAgent,
-          online: navigator.onLine,
-          platform: navigator.platform,
-          language: navigator.language,
-          offsetX: e.offsetX,
-          offsetY: e.offsetY,
-          screenX: e.screenX,
-          screenY: e.screenY,
-          scrollX: window.scrollX,
-          scrollY: window.screenY,
-          pageWidth: document.body.clientWidth,
-          pageHeight: document.body.clientHeight,
-          windowWidth: window.innerWidth,
-          windowHeight: window.innerHeight,
-          screenWidth: window.screen.width,
-          screenHeight: window.screen.height,
-          uri: location.href,
-          referer: document.referrer,
-          target: getEl(target),
-          paths: domPaths(target)
-        })
       }
     }
     window.addEventListener('mousemove', debounce(mouseEventHandler('mousemove')))
     window.addEventListener('click', debounce(mouseEventHandler('click')))
   }
   unHijack () {
-    if (this.isAddition !== true) {
+    if (this.native) {
       return
     }
-    this.unHijackError()
+    this.unHijackGlobalError()
     this.unHijackEvent()
     this.unHijackFn()
     this.unHijackXmlHttpRequest()
     this.unHijackFetch()
   }
   hijack () {
-    if (this.isAddition === true) {
+    if (!this.native) {
       return
     }
-    this.hijackError()
+    this.hijackGlobalError()
     this.hijackEvent()
     this.hijackFn()
     this.hijackXmlHttpRequest()
     this.hijackFetch()
-    this.isAddition = true
+  }
+  addEventListenerFn (old: any, weakmap: WeakMap<any, any>) {
+    let self = this
+    return function (this: any, type: string, listener: any, options: any) {
+      let eventListenerProxyFn = function (fn: any) {
+        return function (...arg: any) {
+          try {
+            if (!fn) {
+              return
+            }
+            return fn(...arg)
+          } catch (error) {
+            let time = self.getTime()
+            let stack = new Error(`Event ${type} ${time}`).stack
+            error.stack = error.stack + '\n' + stack
+            throw error
+          }
+        }
+      }
+      if (!listener) {
+        return old.call(this, type, listener, options)
+      }
+      let nListener
+      if (listener.handleEvent) {
+        nListener = {
+          handleEvent: eventListenerProxyFn(listener.handleEvent)
+        }
+      }
+      if (isFunction(listener)) {
+        nListener = eventListenerProxyFn(listener)
+      }
+      if (nListener) {
+        weakmap.set(listener, nListener)
+        return old.call(this, type, nListener, options)
+      } else {
+        return old.call(this, type, listener, options)
+      }
+    }
+  }
+  removeEventListenerFn (old: any, weakmap: WeakMap<any, any>) {
+    return function (this: any, type: string, listener: any, options: any) {
+      let nListener = weakmap.get(listener)
+      if (!nListener) {
+        return old.call(this, type, listener, options)
+      }
+      return old.call(this, type, nListener, options)
+    }
   }
   unHijackEvent () {
+    let self = this
     if (window.EventTarget) {
-      window.EventTarget.prototype.addEventListener = oldEventTargetAddListener
+      if (!self.native.eventTarget) return
+      window.EventTarget.prototype.addEventListener = self.native.eventTarget.get(
+        'addEventListener'
+      )
+      window.EventTarget.prototype.removeEventListener = self.native.eventTarget.get(
+        'removeEventListener'
+      )
     } else {
-      EventsKey.forEach(function (key: string) {
-        let win: any = window
-        win[key].prototype.addEventListener = oldEvents[key]
+      if (!self.native.events) return
+      self.native.events.forEach(function (value: any, key: string) {
+        (window as any)[key].prototype.addEventListener = value.addEventListener
+        ;(window as any)[key].prototype.removeEventListener = value.removeEventListener
       })
-      window.addEventListener = oldWinEvents.addEventListener
-      window.removeEventListener = oldWinEvents.removeEventListener
+      if (!self.native.winEvent) return
+      self.native.winEvent.forEach(function (value: any, key: string) {
+        (window as any)[key] = value
+      })
     }
   }
   hijackEvent () {
     let self = this
-    function addEventListenerFn (old: any) {
-      return function (this: any, type: string, listener: any, options: any) {
-        if (!listener) {
-          return old.call(this, type, listener, options)
-        }
-        let proxyFn = function (fn: any) {
-          return function (...arg: any) {
-            try {
-              if (!fn) {
-                return
-              }
-              return fn(...arg)
-            } catch (error) {
-              let time = self.getTime()
-              let stack = new Error(`Event ${type} ${time}`).stack
-              error.stack = error.stack + '\n' + stack
-              self.report('EventError', {
-                time: time,
-                error: error,
-                message: error.message,
-                stack: error.stack
-              })
-            }
-          }
-        }
-        let nListener
-        if (listener.handleEvent) {
-          nListener = {
-            handleEvent: proxyFn(listener.handleEvent)
-          }
-        }
-        if (isFunction(listener)) {
-          nListener = proxyFn(listener)
-        }
-
-        self.eventWeakMap.set(listener, nListener)
-
-        return old.call(this, type, nListener, options)
-      }
-    }
-    function removeEventListenerFn (old: any) {
-      return function (this: any, type: string, listener: any, options: any) {
-        if (!listener) {
-          return old.call(this, type, listener, options)
-        }
-        let nListener = self.eventWeakMap.get(listener)
-        return old.call(this, type, nListener, options)
-      }
-    }
+    self.native.eventListeners = self.native.eventListeners || new WeakMap()
     if (window.EventTarget) {
-      window.EventTarget.prototype.addEventListener = addEventListenerFn(
-        oldEventTargetAddListener
+      if (self.native.eventTarget) return
+      self.native.eventTarget = new Map()
+      self.native.eventTarget.set(
+        'addEventListener',
+        window.EventTarget.prototype.addEventListener
       )
-      window.EventTarget.prototype.removeEventListener = removeEventListenerFn(
-        oldEventTargetRemoveEventListener
+      self.native.eventTarget.set(
+        'removeEventListener',
+        window.EventTarget.prototype.removeEventListener
+      )
+      window.EventTarget.prototype.addEventListener = self.addEventListenerFn(
+        window.EventTarget.prototype.addEventListener,
+        self.native.eventListeners
+      )
+      window.EventTarget.prototype.removeEventListener = self.removeEventListenerFn(
+        window.EventTarget.prototype.removeEventListener,
+        self.native.eventListeners
       )
     } else {
-      EventsKey.forEach(function (key: string) {
-        let win: any = window
-        win[key].prototype.addEventListener = addEventListenerFn(
-          oldEvents[key].addEventListener
+      let eventsKeys: string[] = ['Document', 'Element', 'Node', 'FileReader']
+      if (self.native.events) return
+      self.native.events = new Map()
+      eventsKeys.forEach(function (key: string) {
+        if (!(window as any)[key]) return
+        self.native.events.set(key, {
+          addEventListener: (window as any)[key].prototype.addEventListener,
+          removeEventListener: (window as any)[key].prototype.removeEventListener
+        })
+        ;(window as any)[key].prototype.addEventListener = self.addEventListenerFn(
+          (window as any)[key].prototype.addEventListener,
+          self.native.eventListeners
         )
-        win[key].prototype.removeEventListener = removeEventListenerFn(
-          oldEvents[key].removeEventListener
+        ;(window as any)[key].prototype.removeEventListener = self.removeEventListenerFn(
+          (window as any)[key].prototype.removeEventListener,
+          self.native.eventListeners
         )
       })
-      window.addEventListener = addEventListenerFn(oldWinEvents.addEventListener)
-      window.removeEventListener = removeEventListenerFn(oldWinEvents.removeEventListener)
-    }
-  }
-  broke () {
-    let worker = makeWorker(
-      function (
-        this: Worker,
-        obj: { brokeTime: any; url: string; uid: string; href: string; trackId: string }
-      ) {
-        let pongTimeout: any
-        let tracks: any = []
-        let pongTimeoutFn = () => {
-          return setTimeout(function () {
-            request('post', `${obj.url}?d=${Math.random()}`, {
-              type: 'crash',
-              uid: obj.uid,
-              data: JSON.stringify({
-                href: obj.href,
-                trackId: obj.trackId,
-                tracks: tracks
-              })
-            })
-          }, obj.brokeTime)
-        }
-        let sendPing = () => {
-          return setTimeout(() => {
-            this.postMessage({
-              type: 'ping'
-            })
-          }, 2000)
-        }
-        addEventListener('message', e => {
-          let data = e.data || {}
-          if (data.type === 'pong') {
-            tracks = data.tracks
-            // console.log('获取pong, 清除超时')
-            clearTimeout(pongTimeout)
-            sendPing()
-            pongTimeout = pongTimeoutFn()
-          }
-        })
-        sendPing()
-        pongTimeout = pongTimeoutFn()
-      },
-      {
-        brokeTime: this.brokeTime,
-        url: this.url,
-        uid: this.uid,
-        trackId: this.trackId,
-        href: window.location.href
-      }
-    )
+      if (self.native.winEvent) return
+      self.native.winEvent = new Map()
+      self.native.winEvent.set('addEventListener', window.addEventListener)
+      self.native.winEvent.set('removeEventListener', window.removeEventListener)
 
-    if (!worker) {
-      return
+      window.addEventListener = self.addEventListenerFn(
+        window.addEventListener,
+        self.native.eventListeners
+      )
+      window.removeEventListener = self.removeEventListenerFn(
+        window.removeEventListener,
+        self.native.eventListeners
+      )
     }
-    worker.addEventListener('message', e => {
-      if (!worker) return
-      let data = e.data || {}
-      if (data.type === 'ping') {
-        let tracks = this.tracks.slice(
-          Math.max(0, this.tracks.length - 50),
-          this.tracks.length
-        )
-        // console.log('获取ping, 返回pong')
-        worker.postMessage({
-          type: 'pong',
-          tracks: tracks
-        })
-      }
-    })
   }
   unHijackFn () {
-    FnKeys.forEach(function (key: string) {
-      let win: any = window
-      win[key] = oldFns[key]
+    let self = this
+    if (!self.native.fns) return
+    self.native.fns.forEach(function (value: any, key: string) {
+      (window as any)[key] = value
     })
   }
   hijackFn () {
     let self = this
-    FnKeys.forEach(function (key: string) {
-      let win: any = window
-      win[key] = function (...arg: any) {
+    if (self.native.fns) return
+    let fnKeys = ['setTimeout', 'setInterval', 'requestAnimationFrame']
+    self.native.fns = new Map()
+    fnKeys.forEach(function (key: string) {
+      let fn = (window as any)[key]
+      if (!fn) return
+      self.native.fns.set(key, fn)
+      ;(window as any)[key] = function (...arg: any) {
         try {
-          return oldFns[key].call(this, ...arg)
+          return fn.call(this, ...arg)
         } catch (error) {
           let time = self.getTime()
-          let stack = new Error(`ReFn ${key} ${time}`).stack
+          let stack = new Error(`ReFnError ${key} ${time}`).stack
           error.stack = error.stack + '\n' + stack
-          self.report('ReFnError', {
-            time: time,
-            key: key,
-            error: error,
-            message: error.message,
-            stack: error.stack
-          })
           throw error
         }
       }
     })
   }
-  unHijackError () {
-    // --
-    if (!this.addEventListeners) {
+  unHijackGlobalError () {
+    let self = this
+    if (!self.native.globalErrorListeners) {
       return
     }
     window.removeEventListener(
       'rejectionhandled',
-      this.addEventListeners['rejectionhandled'],
+      self.native.globalErrorListeners.get('rejectionhandled'),
       true
     )
     window.removeEventListener(
       'unhandledrejection',
-      this.addEventListeners['unhandledrejection'],
+      self.native.globalErrorListeners.get('unhandledrejection'),
       true
     )
-    window.removeEventListener('error', this.addEventListeners['error'], true)
+    setTimeout(function () {
+      let onerror = self.native.globalErrorListeners.get('onerror')
+      window.onerror = onerror
+    }, 1)
   }
-  hijackError () {
+  hijackGlobalError () {
     let self = this
-    this.addEventListeners = this.addEventListeners || {}
-    this.addEventListeners['rejectionhandled'] = function (e: PromiseRejectionEvent) {
+    if (self.native.globalErrorListeners) {
+      return
+    }
+    self.native.globalErrorListeners = self.native.globalErrorListeners || new Map()
+    self.native.globalErrorListeners.set('rejectionhandled', function (
+      e: PromiseRejectionEvent
+    ) {
       let time = self.getTime()
       self.report('RejectionhandledError', {
         time: time,
         error: e.reason
       })
-    }
-    this.addEventListeners['unhandledrejection'] = function (e: PromiseRejectionEvent) {
+    })
+    self.native.globalErrorListeners.set('unhandledrejection', function (
+      e: PromiseRejectionEvent
+    ) {
       let time = self.getTime()
       self.report('UnhandledrejectionError', {
         time: time,
         error: e.reason
       })
-    }
-    this.addEventListeners['error'] = function (e: ErrorEvent) {
-      let time = self.getTime()
-      self.report('WindowError', {
-        time: time,
-        data: {
-          filename: e.filename,
-          colno: e.colno,
-          lineno: e.lineno,
-          message: e.message,
-          stack: e.error.stack
-        }
-      })
-    }
+    })
+
     window.addEventListener(
       'rejectionhandled',
-      this.addEventListeners['rejectionhandled'],
+      self.native.globalErrorListeners.get('rejectionhandled'),
       true
     )
     window.addEventListener(
       'unhandledrejection',
-      this.addEventListeners['unhandledrejection'],
+      self.native.globalErrorListeners.get('unhandledrejection'),
       true
     )
-    window.addEventListener('error', this.addEventListeners['error'], true)
+    setTimeout(function () {
+      self.native.globalErrorListeners.set('onerror', window.onerror)
+      window.onerror = function (
+        event: Event | string,
+        source?: string,
+        lineno?: number,
+        colno?: number,
+        error?: Error
+      ) {
+        let time = self.getTime()
+        let message: any = event || error?.message
+        let stack: any = error?.stack || ''
+        try {
+          let onerror = self.native.globalErrorListeners.get('onerror')
+          if (isFunction(onerror)) {
+            onerror(event, source, lineno, colno, error)
+          }
+        } catch (e) {
+          if (e.stack) {
+            stack = stack + '\n' + e.stack
+          }
+        }
+        self.report('WindowError', {
+          time: time,
+          data: {
+            source: source,
+            colno: colno,
+            lineno: lineno,
+            message: message,
+            stack: stack
+          }
+        })
+      }
+    }, 0)
   }
   unHijackXmlHttpRequest () {
-    XMLHttpRequest.prototype.open = nativeAjaxOpen
-    XMLHttpRequest.prototype.send = nativeAjaxSend
-  }
-  unHijackFetch () {
-    if (!oldFetch) {
-      return
-    }
-    window.fetch = oldFetch
-  }
-  hijackFetch () {
-    if (!oldFetch) {
-      return
-    }
     let self = this
-    window.fetch = function (...arg) {
-      return oldFetch
-        .call(this, ...arg)
-        .then(res => {
-          if (!res.ok) {
-            // True if status is HTTP 2xx
-            // 上报错误
-            let time = self.getTime()
-            self.report('FetchError', {
-              time: time,
-              error: res
-            })
-          }
-          return res
-        })
-        .catch(error => {
-          // 上报错误
-          let time = self.getTime()
-          self.report('FetchCatchError', {
-            time: time,
-            error: error,
-            message: error.message,
-            stack: error.stack
-          })
-          throw error
-        })
+    if (!self.native.xhr) {
+      return
     }
+    XMLHttpRequest.prototype.open = self.native.xhr.get('open')
+    XMLHttpRequest.prototype.send = self.native.xhr.get('send')
   }
   hijackXmlHttpRequest () {
+    let self = this
     if (!XMLHttpRequest) {
       return
     }
-    let self = this
+    if (self.native.xhr) return
+    self.native.xhr = new Map()
+    let XMLHttpRequestPrototype = XMLHttpRequest.prototype as any
+    self.native.xhr.set('open', XMLHttpRequest.prototype.open)
+    self.native.xhr.set('send', XMLHttpRequest.prototype.send)
+
+    XMLHttpRequestPrototype.stopLog = function () {
+      const xhrInstance: any = this
+      xhrInstance._stopLog = true
+    }
     XMLHttpRequest.prototype.open = function (
       mothod: string,
       url: string,
@@ -484,7 +511,9 @@ export class ErrorLog {
     ) {
       const xhrInstance: any = this
       xhrInstance._url = url
-      return nativeAjaxOpen.call(this, mothod, url, async as any, username, password)
+      return self.native.xhr
+        .get('open')
+        .call(xhrInstance, mothod, url, async as any, username, password)
     }
 
     XMLHttpRequest.prototype.send = function (...args) {
@@ -492,16 +521,15 @@ export class ErrorLog {
       const xhrInstance: any = this
 
       xhrInstance.addEventListener('error', function (e: any) {
+        if (xhrInstance._stopLog === true) return
         let time = self.getTime()
         self.report('XMLHttpRequestCatchError', {
           time: time,
           error: {
-            status: e.target.status,
-            statusText: e.target.statusText,
-            native: e
-          },
-          message: e.message,
-          stack: e.stack
+            status: xhrInstance.status,
+            statusText: xhrInstance.statusText,
+            native: xhrInstance
+          }
         })
       })
 
@@ -514,6 +542,7 @@ export class ErrorLog {
       this.onreadystatechange = function (...innerArgs) {
         if (xhrInstance.readyState === 4) {
           if (!xhrInstance._isAbort && xhrInstance.status !== 200) {
+            if (xhrInstance._stopLog === true) return
             let time = self.getTime()
             self.report('XMLHttpRequestError', {
               time: time,
@@ -527,7 +556,43 @@ export class ErrorLog {
         }
         oldCb && oldCb.apply(this, innerArgs)
       }
-      return nativeAjaxSend.apply(this, args)
+      return self.native.xhr.get('send').apply(this, args)
+    }
+  }
+  unHijackFetch () {
+    let self = this
+    if (!self.native.fetch) {
+      return
+    }
+    window.fetch = self.native.fetch
+  }
+  hijackFetch () {
+    let self = this
+    if (!window.fetch) return
+    if (self.native.fetch) return
+    self.native.fetch = window.fetch
+    window.fetch = function (...arg) {
+      return self.native.fetch
+        .call(this, ...arg)
+        .then((res: any) => {
+          if (!res.ok) {
+            // True if status is HTTP 2xx
+            // 上报错误
+            let time = self.getTime()
+            self.report('FetchError', {
+              time: time,
+              error: res
+            })
+          }
+          return res
+        })
+        .catch((error: any) => {
+          // 上报错误
+          let time = self.getTime()
+          let stack = new Error(`FetchCatchError ${time}`).stack
+          error.stack = error.stack + '\n' + stack
+          throw error
+        })
     }
   }
 }
