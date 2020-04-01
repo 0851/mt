@@ -102,62 +102,61 @@ export function request (
   callback?: any,
   failed?: any
 ) {
-  try {
-    let xhr = new XMLHttpRequest()
-    let xhrInstance: any = xhr
-    xhrInstance.stopLog && xhrInstance.stopLog()
-    if (tryAgain > 0) {
-      xhr.addEventListener('error', function (e: any) {
+  let count = tryAgain
+  let query = function () {
+    try {
+      let xhr = new XMLHttpRequest()
+      let xhrInstance: any = xhr
+      xhrInstance.stopLog && xhrInstance.stopLog()
+      let reTry = function () {
         setTimeout(() => {
+          if (count <= 0) return
           let time = new Date().getTime()
           data.tryTime = time
           data.tryStatus = xhr.status
           data.tryStatusText = xhr.status
-          data.tryEvent = e
-          data.tryMessage = e.message
-          data.tryStack = e.stack
-          request(method, url, data, tryAgain--)
-        }, 1000)
-      })
-    }
-    xhr.withCredentials = true
-    xhr.open(method, url, true)
-    xhr.timeout = 10
-    xhr.onreadystatechange = e => {
-      try {
-        if (!xhr) {
-          return
-        }
-        if (xhr.readyState === 4) {
-          if (xhr.status === 200) {
-            let res = JSON.parse(xhr.responseText)
-            callback && callback(res)
-          } else {
-            failed && failed(xhr.status)
-            setTimeout(() => {
-              let time = new Date().getTime()
-              data.tryTime = time
-              data.tryStatus = xhr.status
-              data.tryStatusText = xhr.status
-              request(method, url, data, tryAgain--)
-            }, 1000)
-          }
-        }
-      } catch (error) {
-        console.error(error)
+          data.tryEvent = xhr
+          data.tryAgainCount = count
+          count = count - 1
+          query()
+        }, 120000)
       }
+      xhr.addEventListener('error', function (e: any) {
+        reTry()
+      })
+      xhr.withCredentials = true
+      xhr.open(method, url, true)
+      xhr.onreadystatechange = e => {
+        try {
+          if (!xhr) {
+            return
+          }
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              let res = JSON.parse(xhr.responseText)
+              callback && callback(res)
+            } else {
+              failed && failed(xhr.status)
+              reTry()
+            }
+          }
+        } catch (error) {
+          console.error(error)
+        }
+      }
+      xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8')
+      if (method.toLowerCase() === 'get') {
+        xhr.send(null)
+      }
+      if (method.toLowerCase() === 'post') {
+        let p = JSON.stringify(data)
+        xhr.send(p)
+      }
+    } catch (error) {
+      console.error('request', error)
     }
-    xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8')
-    if (method.toLowerCase() === 'get') {
-      xhr.send(null)
-    }
-    if (method.toLowerCase() === 'post') {
-      let p = JSON.stringify(data)
-      xhr.send(p)
-    }
-  } catch (error) {
-    console.error('request', error)
   }
+  query()
 }
 
 export function fn2workerURL (fn: Function, obj?: object) {
@@ -223,11 +222,6 @@ let worker = makeWorker(function () {
     request('post', `${data.url}?d=${Math.random()}`, data, 3)
   })
 })
-
-// let worker = new Worker('./work.js')
-// let userAgent = navigator.userAgent
-// let isIE = 'ActiveXObject' in window
-// let isEdge = userAgent.indexOf('Edge') > -1
 
 export function report (url: string, uid: string, type: string, data: any) {
   setTimeout(function () {

@@ -19,8 +19,11 @@
   },
   "files": [
     "@types/module.d.ts",
-    "@types/mtsdk.d.ts",
-    "@types/mtsdk-panel.d.ts",
+    "@types/event.d.ts",
+    "@types/mt.d.ts",
+    "@types/mt-error.d.ts",
+    "@types/mt-fps.d.ts",
+    "@types/mt-panel.d.ts",
     "@types/types.d.ts"
   ],
   "include": [
