@@ -26,7 +26,7 @@ let cancelAnimationFrame = (function (): (handle: number) => void {
   )
 })()
 
-class MonitorFps extends EventBus implements Monitor.MonitorPlugin {
+class MtFps extends EventBus implements Mt.Plugin {
   lists: number[] = []
   lastTime: number = 0
   lastFameTime: number = 0
@@ -35,13 +35,13 @@ class MonitorFps extends EventBus implements Monitor.MonitorPlugin {
   timer?: number
   stoped: boolean = false
   timeout: number
-  monitor?: Monitor
+  monitor?: Mt
   constructor (count: number, timeout: number) {
     super()
     this.count = count
     this.timeout = timeout || 100000
   }
-  apply (monitor: Monitor): void {
+  apply (monitor: Mt): void {
     this.monitor = monitor
     this.lastTime = monitor.getTime()
     this.frame = 0
@@ -98,5 +98,5 @@ class MonitorFps extends EventBus implements Monitor.MonitorPlugin {
     this.stoped = true
   }
 }
-export { MonitorFps }
-export default MonitorFps
+export { MtFps }
+export default MtFps

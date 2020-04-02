@@ -8,8 +8,11 @@
     "dev": "ksr dev -e index.html -p 8991 -h 0.0.0.0 --static ./",
     "build": "rm -rf dist && npm run build-index && npm run build-main && npm run build-panel",
     "build-index":"ksr build -e index.html:path=test/index.html --min false",
-    "build-main":"ksr build -e mt.ts:path=mt --hash false --library mt --target umd",
-    "build-panel": "ksr build -e mt-panel.ts:path=mtpanel --hash false --library mtpanel --target umd",
+    "build-main":"ksr build -e mt.ts:path=mt --hash false --library Mt --target umd",
+    "build-panel": "ksr build -e mt-panel.ts:path=mt-panel --hash false --library MtPanel --target umd",
+    "build-error": "ksr build -e mt-error.ts:path=mt-error --hash false --library MtError --target umd",
+    "build-fps": "ksr build -e mt-fps.ts:path=mt-fps --hash false --library MtFps --target umd",
+    "build-event": "ksr build -e event.ts:path=event --hash false --library EventBus --target umd",
     "fix-lint": "tslint -p tsconfig.json --fix",
     "lint": "tslint -p tsconfig.json -t verbose"
   },

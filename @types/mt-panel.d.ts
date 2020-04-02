@@ -1,8 +1,8 @@
 import EventBus from './event.d'
-export as namespace MonitorPanel
-export = MonitorPanel
+export as namespace MtPanel
+export = MtPanel
 
-declare class MonitorPanel extends EventBus {
-  constructor(fps?: MonitorFps, err?: MonitorError)
-  apply(monitor: Monitor): void
+declare class MtPanel extends EventBus implements Mt.Plugin {
+  constructor(fps?: MtFps, err?: MtError)
+  apply(monitor: Mt): void
 }

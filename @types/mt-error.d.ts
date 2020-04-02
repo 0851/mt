@@ -1,8 +1,8 @@
 import EventBus from './event.d'
-export as namespace MonitorError
-export = MonitorError
+export as namespace MtError
+export = MtError
 
-declare class MonitorError extends EventBus {
+declare class MtError extends EventBus implements Mt.Plugin {
   tracks: ITack[]
   brokeTimeout: number
   hasTrack: boolean
@@ -11,14 +11,14 @@ declare class MonitorError extends EventBus {
   logsMergeMax: number
   native: any
   worker?: Worker
-  monitor?: Monitor
+  monitor?: Mt
   constructor(
     brokeTimeout: number,
     tracksMax: number,
     logsMergeMax: number,
     hasTrack?: boolean
   )
-  apply(monitor: Monitor): void
+  apply(monitor: Mt): void
   broke(): void
   addTrack(item: ITack): void
   report(type: string, data: any, force?: boolean): void

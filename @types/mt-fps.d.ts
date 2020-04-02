@@ -1,8 +1,8 @@
 import EventBus from './event.d'
-export as namespace MonitorFps
-export = MonitorFps
+export as namespace MtFps
+export = MtFps
 
-declare class MonitorFps extends EventBus {
+declare class MtFps extends EventBus implements Mt.Plugin {
   lists: number[]
   lastTime: number
   lastFameTime: number
@@ -11,9 +11,9 @@ declare class MonitorFps extends EventBus {
   timer?: number
   timeout?: number
   stoped: boolean
-  monitor?: Monitor
+  monitor?: Mt
   constructor(count: number, timeout: number)
-  apply(monitor: Monitor): void
+  apply(monitor: Mt): void
   reportFps(): void
   start(): void
   stop(): void

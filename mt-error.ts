@@ -3,7 +3,7 @@ import 'core-js/es6/map'
 import EventBus from './event'
 import { debounce, domPaths, getEl, makeWorker, request, isFunction } from './src/util'
 
-class MonitorError extends EventBus implements Monitor.MonitorPlugin {
+class MtError extends EventBus implements Mt.Plugin {
   tracks: ITack[] = []
   brokeTimeout: number = 5000
   hasTrack: boolean = true
@@ -12,7 +12,7 @@ class MonitorError extends EventBus implements Monitor.MonitorPlugin {
   logsMergeMax: number = 100
   native: any
   worker?: Worker
-  monitor?: Monitor
+  monitor?: Mt
   constructor (
     brokeTimeout: number,
     tracksMax: number,
@@ -28,7 +28,7 @@ class MonitorError extends EventBus implements Monitor.MonitorPlugin {
     this.tracksMax = tracksMax
     this.native = this.native || {}
   }
-  apply (monitor: Monitor): void {
+  apply (monitor: Mt): void {
     this.monitor = monitor
     try {
       this.hijack()
@@ -576,5 +576,5 @@ class MonitorError extends EventBus implements Monitor.MonitorPlugin {
     }
   }
 }
-export { MonitorError }
-export default MonitorError
+export { MtError }
+export default MtError

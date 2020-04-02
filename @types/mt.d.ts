@@ -1,16 +1,16 @@
 import EventBus from './event.d'
-export as namespace Monitor
-export = Monitor
+export as namespace Mt
+export = Mt
 
-declare class Monitor extends EventBus {
-  constructor(config: Monitor.IConfig)
+declare class Mt extends EventBus {
+  constructor(config: Mt.IConfig)
   count: number
   uid: string
   reportUrl?: string
-  performances?: Monitor.IPerformance[]
-  getEntriesPerformance(item: PerformanceResourceTiming): Monitor.IPerformanceEntry
+  performances?: Mt.IPerformance[]
+  getEntriesPerformance(item: PerformanceResourceTiming): Mt.IPerformanceEntry
   getPerformance(): void
-  plugin(plugin: Monitor.MonitorPlugin): Monitor
+  plugin(plugin: Mt.Plugin): Mt
   getTime(): number
   run(): void
   trackId: string
@@ -18,17 +18,17 @@ declare class Monitor extends EventBus {
   report(type: string, data: any): void
   [key: string]: any
 }
-declare namespace Monitor {
+declare namespace Mt {
   export interface IConfig {
     count?: number
     reportUrl?: string
     uid: string
   }
-  export interface MonitorPlugin extends EventBus {
-    apply(monitor: Monitor): void
+  export interface Plugin extends EventBus {
+    apply(monitor: Mt): void
   }
-  export interface MonitorPluginConstructable {
-    new (): MonitorPlugin
+  export interface PluginConstructable {
+    new (): Plugin
   }
   export interface IPerformance {
     // dns 耗时

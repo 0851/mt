@@ -2,14 +2,14 @@ import './src/panel/temp.styl'
 import temp from './src/panel/temp.pug'
 import EventBus from './event'
 
-class MonitorPanel extends EventBus implements Monitor.MonitorPlugin {
-  fps?: MonitorFps
-  err?: MonitorError
-  constructor (fps?: MonitorFps, err?: MonitorError) {
+class MtPanel extends EventBus implements Mt.Plugin {
+  fps?: MtFps
+  err?: MtError
+  constructor (fps?: MtFps, err?: MtError) {
     super()
     // --
   }
-  apply (monitor: Monitor): void {
+  apply (monitor: Mt): void {
     this.render()
     this.toggleTitle()
   }
@@ -38,5 +38,5 @@ class MonitorPanel extends EventBus implements Monitor.MonitorPlugin {
     })
   }
 }
-export { MonitorPanel }
-export default MonitorPanel
+export { MtPanel }
+export default MtPanel

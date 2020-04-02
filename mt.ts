@@ -5,14 +5,14 @@ import EventBus from './event'
 const PLUGIN_START = 'plugin:mount'
 const PLUGIN_END = 'plugin:mounted'
 
-class Monitor extends EventBus {
+class Mt extends EventBus {
   count: number
-  performances?: Monitor.IPerformance[]
-  plugins: Monitor.MonitorPlugin[]
+  performances?: Mt.IPerformance[]
+  plugins: Mt.Plugin[]
   uid: string
   trackId: string
   reportUrl?: string
-  constructor (config: Monitor.IConfig) {
+  constructor (config: Mt.IConfig) {
     super()
     this.count = config.count || 10
     this.reportUrl = config.reportUrl
@@ -34,7 +34,7 @@ class Monitor extends EventBus {
     })
     return uuid
   }
-  plugin (plugin: Monitor.MonitorPlugin): Monitor {
+  plugin (plugin: Mt.Plugin): Mt {
     this.plugins.push(plugin)
     return this
   }
@@ -51,7 +51,7 @@ class Monitor extends EventBus {
       plugin.emit(PLUGIN_END, this)
     })
   }
-  getEntriesPerformance (item: PerformanceResourceTiming): Monitor.IPerformanceEntry {
+  getEntriesPerformance (item: PerformanceResourceTiming): Mt.IPerformanceEntry {
     return {
       name: item.name,
       dnstime: subtraction(item, 'domainLookupEnd', 'domainLookupStart'),
@@ -67,14 +67,14 @@ class Monitor extends EventBus {
       let timing = performance.timing
       let navigation = performance.navigation
       let entriesItems = performance.getEntries()
-      let entries: Monitor.IPerformanceEntry[] = entriesItems
+      let entries: Mt.IPerformanceEntry[] = entriesItems
         .filter(item => {
           return item.entryType === 'resource'
         })
         .map(item => {
           return this.getEntriesPerformance(item as PerformanceResourceTiming)
         })
-      let perf: Monitor.IPerformance = {
+      let perf: Mt.IPerformance = {
         dnstime: subtraction(timing, 'domainLookupEnd', 'domainLookupStart'),
         tcptracetime: subtraction(timing, 'connectEnd', 'connectStart'),
         requesttime: subtraction(timing, 'responseStart', 'requestStart'),
@@ -95,5 +95,5 @@ class Monitor extends EventBus {
     }
   }
 }
-export { Monitor }
-export default Monitor
+export { Mt }
+export default Mt
