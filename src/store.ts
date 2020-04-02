@@ -1,6 +1,6 @@
 const LocalStoreKey = '__perf_monitor__'
 
-export function getLocalStore (): Monitor.IPerformance[] {
+export function getLocalStore (): Mt.IPerformance[] {
   if (!localStorage) {
     return []
   }
@@ -8,7 +8,7 @@ export function getLocalStore (): Monitor.IPerformance[] {
   if (!res) {
     return []
   }
-  let items: Monitor.IPerformance[]
+  let items: Mt.IPerformance[]
   try {
     items = JSON.parse(res)
   } catch (error) {
@@ -18,9 +18,9 @@ export function getLocalStore (): Monitor.IPerformance[] {
 }
 
 export function setLocalStore (
-  item: Monitor.IPerformance,
+  item: Mt.IPerformance,
   count: number
-): Monitor.IPerformance[] {
+): Mt.IPerformance[] {
   if (!localStorage) {
     return []
   }

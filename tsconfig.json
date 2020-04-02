@@ -23,8 +23,7 @@
     "@types/mt.d.ts",
     "@types/mt-error.d.ts",
     "@types/mt-fps.d.ts",
-    "@types/mt-panel.d.ts",
-    "@types/types.d.ts"
+    "@types/mt-panel.d.ts"
   ],
   "include": [
     "**/*.ts"
