@@ -4,13 +4,13 @@ import MtFps from './mt-fps'
 import MtError from './mt-error'
 
 let monitor = new Mt({
-  uid: 'test',
-  reportUrl: `http://${location.hostname}:8000/log`
+  uid: 'test'
+  // reportUrl: `http://${location.hostname}:8000/log`
 })
 
-let fps = new MtFps(30, 500000)
+let fps = new MtFps(10, 10000)
 let err = new MtError(100000, 100, 10)
-let panel = new MtPanel()
+let panel = new MtPanel(fps, err)
 
 panel.on('plugin:start', (content: any) => {
   console.log(content)
@@ -18,6 +18,7 @@ panel.on('plugin:start', (content: any) => {
 panel.on('plugin:end', (content: any) => {
   console.log(content)
 })
+
 monitor
   .plugin(fps)
   .plugin(err)
@@ -25,10 +26,10 @@ monitor
 
 monitor.run()
 
-function sdd () {
-  throw new Error('====click error===')
-}
-window.addEventListener('click', sdd)
+// function sdd () {
+//   throw new Error('====click error===')
+// }
+// window.addEventListener('click', sdd)
 // setTimeout(function () {
 // window.removeEventListener('click', sdd)
 //   let a = new Promise(function (res, rj) {

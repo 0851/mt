@@ -1,4 +1,5 @@
 import EventBus from './event'
+import { performancenow } from './src/util'
 
 let requestAnimFrame = (function (): (callback: FrameRequestCallback) => number {
   return (
@@ -36,16 +37,16 @@ class MtFps extends EventBus implements Mt.Plugin {
   stoped: boolean = false
   timeout: number
   monitor?: Mt
-  constructor (count: number, timeout: number) {
+  constructor (count?: number, timeout?: number) {
     super()
-    this.count = count
+    this.count = count || 10
     this.timeout = timeout || 100000
   }
   apply (monitor: Mt): void {
     this.monitor = monitor
-    this.lastTime = monitor.getTime()
+    this.lastTime = performancenow()
     this.frame = 0
-    this.lastFameTime = monitor.getTime()
+    this.lastFameTime = performancenow()
     this.lists = []
     this.stoped = false
     this.start()
@@ -54,10 +55,8 @@ class MtFps extends EventBus implements Mt.Plugin {
   reportFps () {
     if (!this.monitor) return
     setTimeout(() => {
-      if (!this.monitor?.reportUrl) {
-        return
-      }
       this.monitor?.report('fps', this.lists)
+      this.emit('fps:logs', this.lists)
       this.reportFps()
     }, this.timeout)
   }
@@ -70,7 +69,7 @@ class MtFps extends EventBus implements Mt.Plugin {
         }
         return
       }
-      let now = this.monitor.getTime()
+      let now = performancenow()
       let fs = now - this.lastFameTime
       this.lastFameTime = now
       let fps = Math.round(1000 / fs)

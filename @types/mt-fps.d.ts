@@ -12,7 +12,7 @@ declare class MtFps extends EventBus implements Mt.Plugin {
   timeout?: number
   stoped: boolean
   monitor?: Mt
-  constructor(count: number, timeout: number)
+  constructor(count?: number, timeout?: number)
   apply(monitor: Mt): void
   reportFps(): void
   start(): void

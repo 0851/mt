@@ -140,6 +140,7 @@ class MtError extends EventBus implements Mt.Plugin {
     } else if (this.logs.length >= this.logsMergeMax) {
       this.monitor?.report(type, this.logs)
     }
+    this.emit('err:logs', this.logs)
     this.logs = []
   }
   recordTrack () {

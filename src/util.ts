@@ -250,3 +250,9 @@ export function getTime (): number {
   }
   return d
 }
+export function performancenow (): number {
+  if (window.performance && typeof window.performance.now === 'function') {
+    return performance.now()
+  }
+  return new Date().getTime()
+}
