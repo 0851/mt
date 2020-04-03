@@ -4,10 +4,10 @@ export = Mt
 
 declare class Mt extends EventBus {
   constructor(config: Mt.IConfig)
-  count: number
+  product: string
   uid: string
   reportUrl?: string
-  performances?: Mt.IPerformance[]
+  performance?: Mt.IPerformance
   getEntriesPerformance(item: PerformanceResourceTiming): Mt.IPerformanceEntry
   getPerformance(): void
   plugin(plugin: Mt.Plugin): Mt
@@ -20,8 +20,8 @@ declare class Mt extends EventBus {
 }
 declare namespace Mt {
   export interface IConfig {
-    count?: number
     reportUrl?: string
+    product: string
     uid: string
   }
   export interface Plugin extends EventBus {

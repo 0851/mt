@@ -9,6 +9,15 @@ export function subtraction (item: any, key1: string, key2: string): number {
   }
   return 0
 }
+export function autoUnit (bytes: number, unit: string = 'Bytes') {
+  let units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB']
+  const index = units.indexOf(unit)
+  if (index < 0) {
+    throw Error(`unit must be one of ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB']`)
+  }
+  let multiple = Math.floor(Math.log(bytes) / Math.log(1024))
+  return (bytes / Math.pow(1024, multiple)).toFixed(2) + ' ' + units[multiple + index]
+}
 export function debounce (
   func: (...args: any) => any,
   wait: number = 150,
@@ -223,11 +232,18 @@ let worker = makeWorker(function () {
   })
 })
 
-export function report (url: string, uid: string, type: string, data: any) {
+export function report (
+  url: string,
+  product: string,
+  uid: string,
+  type: string,
+  data: any
+) {
   setTimeout(function () {
     let payload = {
       type: type,
       uid: uid,
+      product: product,
       url: url,
       data: JSON.stringify(data)
     }

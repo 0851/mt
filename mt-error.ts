@@ -47,7 +47,14 @@ class MtError extends EventBus implements Mt.Plugin {
     self.worker = makeWorker(
       function (
         this: Worker,
-        obj: { brokeTime: any; url: string; uid: string; href: string; trackId: string }
+        obj: {
+          brokeTime: any
+          url: string
+          uid: string
+          product: string
+          href: string
+          trackId: string
+        }
       ) {
         let pongTimeout: any
         let tracks: any = []
@@ -59,6 +66,7 @@ class MtError extends EventBus implements Mt.Plugin {
               {
                 type: 'crash',
                 uid: obj.uid,
+                product: obj.product,
                 data: JSON.stringify({
                   href: obj.href,
                   trackId: obj.trackId,
@@ -93,6 +101,7 @@ class MtError extends EventBus implements Mt.Plugin {
         brokeTime: this.brokeTimeout,
         url: this.monitor?.reportUrl,
         uid: this.monitor?.uid,
+        product: this.monitor?.product,
         trackId: this.monitor?.trackId,
         href: window.location.href
       }
@@ -221,7 +230,7 @@ class MtError extends EventBus implements Mt.Plugin {
             if (!self.monitor) return
             let time = self.monitor.getTime()
             let stack = new Error(`Event ${type} ${time}`).stack
-            error.stack = error.stack + '\n' + stack
+            error.stack = stack + '\n' + error.stack
             throw error
           }
         }
@@ -356,7 +365,7 @@ class MtError extends EventBus implements Mt.Plugin {
           if (!self.monitor) return
           let time = self.monitor.getTime()
           let stack = new Error(`ReFnError ${key} ${time}`).stack
-          error.stack = error.stack + '\n' + stack
+          error.stack = stack + '\n' + error.stack
           throw error
         }
       }
@@ -440,7 +449,7 @@ class MtError extends EventBus implements Mt.Plugin {
           }
         } catch (e) {
           if (e.stack) {
-            stack = stack + '\n' + e.stack
+            stack = e.stack + '\n' + stack
           }
         }
         self.report('WindowError', {
@@ -571,7 +580,7 @@ class MtError extends EventBus implements Mt.Plugin {
           if (!self.monitor) return
           let time = self.monitor.getTime()
           let stack = new Error(`FetchCatchError ${time}`).stack
-          error.stack = error.stack + '\n' + stack
+          error.stack = stack + '\n' + error.stack
           throw error
         })
     }

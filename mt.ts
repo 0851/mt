@@ -1,23 +1,25 @@
 import { subtraction, report, getTime } from './src/util'
-import { setLocalStore } from './src/store'
+// import { setLocalStore } from './src/store'
 import EventBus from './event'
 
 const PLUGIN_START = 'plugin:mount'
 const PLUGIN_END = 'plugin:mounted'
 
 class Mt extends EventBus {
-  count: number
-  performances?: Mt.IPerformance[]
+  // count: number
+  // performances?: Mt.IPerformance[]
+  performance?: Mt.IPerformance
   plugins: Mt.Plugin[]
   uid: string
+  product: string
   trackId: string
   reportUrl?: string
   constructor (config: Mt.IConfig) {
     super()
-    this.count = config.count || 10
     this.reportUrl = config.reportUrl
     this.plugins = []
     this.uid = config.uid
+    this.product = config.product
     this.trackId = this.trackIdGenerator()
     try {
       this.getPerformance()
@@ -41,7 +43,7 @@ class Mt extends EventBus {
   getTime = getTime
   report (type: string, data: any) {
     if (!this.reportUrl) return
-    report(this.reportUrl, this.uid, type, data)
+    report(this.reportUrl, this.product, this.uid, type, data)
   }
   run () {
     let plugins = this.plugins
@@ -90,7 +92,8 @@ class Mt extends EventBus {
         entries: entries,
         timing: timing
       }
-      this.performances = setLocalStore(perf, this.count)
+      this.performance = perf
+      // this.performances = setLocalStore(perf, this.count)
       this.report('performance', perf)
     }
   }

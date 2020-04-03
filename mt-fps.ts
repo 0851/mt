@@ -49,7 +49,9 @@ class MtFps extends EventBus implements Mt.Plugin {
     this.lastFameTime = performancenow()
     this.lists = []
     this.stoped = false
-    this.start()
+    this.timer = requestAnimFrame(() => {
+      this.start()
+    })
     this.reportFps()
   }
   reportFps () {
