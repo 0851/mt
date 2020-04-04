@@ -1,3 +1,4 @@
+import N from 'number-precision'
 export function subtraction (item: any, key1: string, key2: string): number {
   if (
     item[key1] &&
@@ -9,14 +10,87 @@ export function subtraction (item: any, key1: string, key2: string): number {
   }
   return 0
 }
-export function autoUnit (bytes: number, unit: string = 'Bytes') {
+
+export function isReady (callback: Function) {
+  let cb = function () {
+    setTimeout(() => {
+      callback()
+    })
+  }
+  if (document.addEventListener) {
+    const func = function () {
+      document.removeEventListener('DOMContentLoaded', func, false)
+      cb()
+    }
+    document.addEventListener('DOMContentLoaded', func, false)
+  } else if ((document as any).attachEvent) {
+    const func = function () {
+      if (document.readyState === 'complete') {
+        (document as any).detachEvent('onreadystatechange', func)
+        cb()
+      }
+    }
+    ;(document as any).attachEvent('onreadystatechange', func)
+  } else {
+    let check = function () {
+      let timer = setTimeout(function () {
+        timer && clearTimeout(timer)
+        if (document.body) {
+          cb()
+        } else {
+          check()
+        }
+      }, 500)
+    }
+    check()
+  }
+}
+function toFixed (v: number): number {
+  let res = Number(v.toFixed(2))
+  return res
+}
+export function autoUnitMs (msd: number): string {
+  let res: string[] = []
+  let ms = 1
+  let s = ms * 1000
+  let m = 60 * s
+  let h = m * 60
+  let d = h * 24
+  let map: any = {
+    ms,
+    s,
+    m,
+    h,
+    d
+  }
+  let keys = ['d', 'h', 'm', 's', 'ms']
+
+  keys.forEach(k => {
+    if (msd <= 0) return
+    let b = Math.floor(msd / map[k])
+    let y = msd % map[k]
+    if (y !== 0) {
+      msd = y
+    } else {
+      msd = 0
+    }
+    if (b > 0) {
+      res.push(`${b}${k}`)
+    }
+  })
+  return res.join('.')
+}
+// console.log(autoUnitMs(60 * 60 * 1000 * 24 + 60 * 60 * 1000 + 2 * 1000))
+
+export function autoUnitSize (v: number, unit: string = 'Bytes') {
   let units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB']
   const index = units.indexOf(unit)
   if (index < 0) {
-    throw Error(`unit must be one of ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB']`)
+    throw Error(`unit must be one of ${units.join(',')}`)
   }
-  let multiple = Math.floor(Math.log(bytes) / Math.log(1024))
-  return (bytes / Math.pow(1024, multiple)).toFixed(2) + ' ' + units[multiple + index]
+  let exponent = 1024
+  let multiple = Math.floor(Math.log(v) / Math.log(exponent))
+  return toFixed(v / Math.pow(exponent, multiple)) + ' ' + units[multiple + index]
 }
 export function debounce (
   func: (...args: any) => any,

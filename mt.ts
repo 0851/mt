@@ -1,4 +1,4 @@
-import { subtraction, report, getTime } from './src/util'
+import { subtraction, report, getTime, isReady } from './src/util'
 // import { setLocalStore } from './src/store'
 import EventBus from './event'
 
@@ -6,8 +6,6 @@ const PLUGIN_START = 'plugin:mount'
 const PLUGIN_END = 'plugin:mounted'
 
 class Mt extends EventBus {
-  // count: number
-  // performances?: Mt.IPerformance[]
   performance?: Mt.IPerformance
   plugins: Mt.Plugin[]
   uid: string
@@ -21,11 +19,6 @@ class Mt extends EventBus {
     this.uid = config.uid
     this.product = config.product
     this.trackId = this.trackIdGenerator()
-    try {
-      this.getPerformance()
-    } catch (error) {
-      console.error('monitor error', error)
-    }
   }
   trackIdGenerator () {
     let d = this.getTime()
@@ -46,19 +39,29 @@ class Mt extends EventBus {
     report(this.reportUrl, this.product, this.uid, type, data)
   }
   run () {
-    let plugins = this.plugins
-    plugins.forEach(plugin => {
-      plugin.emit(PLUGIN_START, this)
-      plugin.apply(this)
-      plugin.emit(PLUGIN_END, this)
+    isReady(() => {
+      let plugins = this.plugins
+      try {
+        this.getPerformance()
+      } catch (error) {
+        console.error('monitor error', error)
+      }
+      plugins.forEach(plugin => {
+        plugin.emit(PLUGIN_START, this)
+        plugin.apply(this)
+        plugin.emit(PLUGIN_END, this)
+      })
     })
   }
   getEntriesPerformance (item: PerformanceResourceTiming): Mt.IPerformanceEntry {
     return {
       name: item.name,
       dnstime: subtraction(item, 'domainLookupEnd', 'domainLookupStart'),
+      tcptracetime: subtraction(item, 'connectEnd', 'connectStart'),
       requesttime: subtraction(item, 'responseStart', 'requestStart'),
       responsetime: subtraction(item, 'responseEnd', 'responseStart'),
+      allnetworktime: subtraction(item, 'responseEnd', 'fetchStart'),
+      redirect: subtraction(item, 'redirectEnd', 'redirectStart'),
       size: item.transferSize,
       timing: item
     }
@@ -81,19 +84,18 @@ class Mt extends EventBus {
         tcptracetime: subtraction(timing, 'connectEnd', 'connectStart'),
         requesttime: subtraction(timing, 'responseStart', 'requestStart'),
         responsetime: subtraction(timing, 'responseEnd', 'responseStart'),
-        allnetworktime: subtraction(timing, 'responseEnd', 'navigationStart'),
+        allnetworktime: subtraction(timing, 'responseEnd', 'fetchStart'),
+        redirect: subtraction(timing, 'redirectEnd', 'redirectStart'),
         domcompiletime: subtraction(timing, 'domComplete', 'domInteractive'),
         whitetime: subtraction(timing, 'domLoading', 'navigationStart'),
-        domreadytime: subtraction(timing, 'domContentLoadedEventEnd', 'navigationStart'),
+        domreadytime: subtraction(timing, 'domContentLoadedEventEnd', 'fetchStart'),
         onloadtime: subtraction(timing, 'loadEventEnd', 'navigationStart'),
         appcachetime: subtraction(timing, 'domainLookupStart', 'fetchStart'),
-        redirect: subtraction(timing, 'redirectEnd', 'redirectStart'),
         redirectCount: navigation && navigation.redirectCount,
         entries: entries,
         timing: timing
       }
       this.performance = perf
-      // this.performances = setLocalStore(perf, this.count)
       this.report('performance', perf)
     }
   }

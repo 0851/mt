@@ -3,6 +3,6 @@ export as namespace MtPanel
 export = MtPanel
 
 declare class MtPanel extends EventBus implements Mt.Plugin {
-  constructor(fps?: MtFps, err?: MtError)
+  constructor(fps?: MtFps)
   apply(monitor: Mt): void
 }

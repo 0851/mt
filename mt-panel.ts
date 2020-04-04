@@ -1,45 +1,43 @@
 import './src/panel/temp.styl'
 import temp from './src/panel/temp.pug'
 import EventBus from './event'
-import { isFunction, autoUnit } from './src/util'
-import {
-  LineChart,
-  RadarChart,
-  ChartLineConfigFactory,
-  randomRgbaColors
-} from './src/panel/chart'
+import { isFunction, autoUnitSize, autoUnitMs } from './src/util'
+import { ChartRender, ChartLineConfigFactory, randomRgbaColors } from './src/panel/chart'
+import N from 'number-precision'
 
 interface IMtPanel {
   performanceContent? (dom: HTMLElement): void
   fpsContent? (dom: HTMLElement): void
-  errContent? (dom: HTMLElement): void
   performanceCanvas? (dom: HTMLCanvasElement): void
   fpsCanvas? (dom: HTMLCanvasElement): void
-  errCanvas? (dom: HTMLCanvasElement): void
 }
 
 class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
   fps?: MtFps
-  err?: MtError
   monitor?: Mt
   dom: { [key: string]: HTMLElement | null }
+  canvas: { [key: string]: HTMLCanvasElement }
   [key: string]: any
-  constructor (fps?: MtFps, err?: MtError) {
+  constructor (fps?: MtFps) {
     super()
     this.dom = {}
+    this.canvas = {}
     this.fps = fps
-    this.err = err
+    this.render()
+    this.toggleTitle()
   }
   apply (monitor: Mt): void {
     this.monitor = monitor
-    this.render()
-    this.toggleTitle()
+    Object.keys(this.canvas).forEach(key => {
+      if (this[key]) {
+        this[key](this.canvas[key])
+      }
+    })
   }
   private render (): void {
     this.initBox()
     this.initDomShow('performance', '.mt-performance', 'monitor')
     this.initDomShow('fps', '.mt-fps', 'fps')
-    this.initDomShow('err', '.mt-error', 'fps')
   }
   private initBox () {
     let content = document.createElement('div')
@@ -52,59 +50,108 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
     if (!this.dom.box) return
     let dom = this.dom.box.querySelector<HTMLElement>(className)
     if (!dom) return
-    if (!this[objkey]) return
     dom.className = `${dom.className} show`
     this.dom[key] = dom
-    let contentKey = `${key}Content`
     let canvasKey = `${key}Canvas`
-    this.dom[contentKey] = dom.querySelector<HTMLElement>('.mt-panel-content')
-    this.dom[canvasKey] = dom.querySelector<HTMLCanvasElement>('.mt-panel-canvas canvas')
-    if (this.dom[contentKey] && contentKey in this && isFunction(this[contentKey])) {
-      this[contentKey](this.dom[contentKey])
-    }
-    if (this.dom[canvasKey] && canvasKey in this && isFunction(this[canvasKey])) {
-      this[canvasKey](this.dom[canvasKey])
+    let canvasDom = dom.querySelector<HTMLCanvasElement>('.mt-panel-canvas canvas')
+    if (canvasDom) {
+      this.canvas[canvasKey] = canvasDom
     }
   }
   performanceCanvas (dom: HTMLCanvasElement): void {
     if (!this.monitor) return
-    let performance: any = Object.assign({}, this.monitor?.performance)
-    let entries: any[] = performance.entries
-    delete performance.entries
-    delete performance.timing
-    let labels: any[] = []
-    let datas: any[] = []
-    let tips: any[] = []
-    Object.keys(performance).forEach((key: string) => {
-      labels.push(key)
-      datas.push(performance[key])
-      tips.push(`[${key}]: ${performance[key]}ms`)
-    })
-    entries.forEach(function (item) {
-      labels.push(`${item.name}`)
-      datas.push(item.responsetime)
-      tips.push([
-        `[name]: ${item.name}`,
-        `[size]: ${autoUnit(item.size)}`,
-        `[dnstime]: ${item.dnstime}ms`,
-        `[requesttime]: ${item.requesttime}ms`,
-        `[responsetime]: ${item.responsetime}ms`
-      ])
-    })
-    let colors = randomRgbaColors()
-    let charter = RadarChart(dom, {
+    let performance: Mt.IPerformance = Object.assign({}, this.monitor?.performance)
+    let entries = performance.entries
+    type OmitIPerformance = Omit<Mt.IPerformance, 'redirectCount' | 'timing' | 'entries'>
+    let networkItemGenerator = (key: keyof Mt.INetworkPerformance) => {
+      let total =
+        performance[key] +
+        entries.reduce((res, item) => {
+          res = N.plus(Number(res.toFixed(3)), Number(item[key].toFixed(3)))
+          return res
+        }, 0)
+      return {
+        total,
+        items: [
+          `[入口]: ${autoUnitMs(performance[key])}`,
+          ...entries.map(item => {
+            return `[${item.name}](${autoUnitSize(item.size)}): ${autoUnitMs(item[key])}`
+          })
+        ]
+      }
+    }
+    let dnsItem = networkItemGenerator('dnstime')
+    let tcptracetimeItem = networkItemGenerator('tcptracetime')
+    let allnetworktimeItem = networkItemGenerator('allnetworktime')
+    let performances = [
+      {
+        key: 'tcptracetime',
+        label: '总网络耗时',
+        value: allnetworktimeItem.total,
+        tips: allnetworktimeItem.items
+      },
+
+      {
+        key: 'domreadytime',
+        label: 'DOM完成耗时',
+        value: performance.domreadytime,
+        tips: performance.domreadytime
+      },
+      {
+        key: 'whitetime',
+        label: '完全白屏时间',
+        value: performance.whitetime,
+        tips: performance.whitetime
+      },
+      {
+        key: 'dnstime',
+        label: '总DNS耗时',
+        value: dnsItem.total,
+        tips: dnsItem.items
+      },
+      {
+        key: 'tcptracetime',
+        label: '总TCP链路耗时',
+        value: tcptracetimeItem.total,
+        tips: tcptracetimeItem.items
+      },
+      {
+        key: 'domcompiletime',
+        label: '解析DOM树耗时',
+        value: performance.domcompiletime,
+        tips: performance.domcompiletime
+      }
+    ]
+
+    let labels = performances.map(item => item.label)
+    let datas: number[] = performances.map(item => item.value)
+
+    let charter = ChartRender(dom, {
+      type: 'bar',
       data: {
+        labels: labels,
         datasets: [
           {
-            label: '启动性能数据',
-            data: datas,
-            backgroundColor: colors.bg,
-            borderColor: colors.border,
-            spanGaps: false,
-            tips: tips
-          } as any
-        ],
-        labels: labels
+            data: [],
+            fill: false,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.5)',
+              'rgba(255, 159, 64, 0.5)',
+              'rgba(255, 205, 86, 0.5)',
+              'rgba(75, 192, 192, 0.5)',
+              'rgba(54, 162, 235, 0.5)',
+              'rgba(153, 102, 255, 0.5)'
+            ],
+            borderColor: [
+              'rgb(255, 99, 132)',
+              'rgb(255, 159, 64)',
+              'rgb(255, 205, 86)',
+              'rgb(75, 192, 192)',
+              'rgb(54, 162, 235)',
+              'rgb(153, 102, 255)'
+            ]
+          }
+        ]
       },
       options: {
         legend: {
@@ -112,37 +159,50 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
         },
         tooltips: {
           callbacks: {
-            label: (tooltipItem: Chart.ChartTooltipItem, data: Chart.ChartData) => {
-              let index = tooltipItem?.index
-              if (!index) {
-                return ''
+            label: item => {
+              if (!item.yLabel || !item.xLabel) return []
+              let total = autoUnitMs(item.yLabel as number)
+              let res = [total]
+              let find = performances.find(obj => {
+                return item?.xLabel === obj.label
+              })
+              if (find && Array.isArray(find.tips)) {
+                res = res.concat(find.tips)
               }
-              let res: any = (data.datasets || [])[0] || {}
-              let tips: string[] = res.tips || []
-              return tips[index]
-            },
-            title: (tooltipItems: Chart.ChartTooltipItem[], data: Chart.ChartData) => {
-              return ''
+              return res
             }
           }
         },
-        scale: {
-          gridLines: {
-            display: false
-          },
-          ticks: {
-            min: 0,
-            backdropColor: 'rgb(100,100,100,0)',
-            fontColor: 'rgb(245,245,245,0.7)'
-          }
+        scales: {
+          yAxes: [
+            {
+              gridLines: {
+                display: true,
+                color: 'rgb(100,100,100,0.5)',
+                zeroLineColor: 'rgb(100,100,100,0.5)'
+              },
+              ticks: {
+                beginAtZero: true,
+                min: 0,
+                suggestedMin: 0
+              }
+            }
+          ]
         }
       }
+    })
+    setTimeout(() => {
+      datas.forEach((item: any, i) => {
+        if (!charter?.data.datasets) return
+        charter?.data.datasets[0].data?.push(item)
+      })
+      charter?.update()
     })
   }
   fpsCanvas (dom: HTMLCanvasElement): void {
     let self = this
     if (!self.fps) return
-    let charter = LineChart(
+    let charter = ChartRender(
       dom,
       ChartLineConfigFactory({
         data: {
@@ -178,14 +238,6 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
         charter?.update()
       }, 0)
     })
-  }
-  errCanvas (dom: HTMLCanvasElement): void {
-    if (!this.err) return
-    console.log(this.err.logs, 'this.err.logs')
-    this.err.on('err:logs', function (logs: any) {
-      console.log(logs, 'changed this.err.logs')
-    })
-    console.log('===errContent==')
   }
   private toggleTitle (): void {
     let box = document.querySelector<HTMLElement>('.mt-monitor-box')

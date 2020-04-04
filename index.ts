@@ -12,7 +12,7 @@ let monitor = new Mt({
 
 let fps = new MtFps(10, 2000)
 let err = new MtError(100000, 100, 10)
-let panel = new MtPanel(fps, err)
+let panel = new MtPanel(fps)
 
 // panel.on('plugin:mount', (content: any) => {
 //   console.log(content)

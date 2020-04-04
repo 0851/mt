@@ -30,7 +30,7 @@ declare namespace Mt {
   export interface PluginConstructable {
     new (): Plugin
   }
-  export interface IPerformance {
+  export interface INetworkPerformance {
     // dns 耗时
     dnstime: number
     // tcp链路消耗时间
@@ -41,9 +41,13 @@ declare namespace Mt {
     responsetime: number
     // 总体网络耗时
     allnetworktime: number
+    // 跳转耗时
+    redirect: number
+  }
+  export interface IPerformance extends INetworkPerformance {
     // 解析dom树消耗时间
     domcompiletime: number
-    // 白屏时间
+    // 完全白屏时间
     whitetime: number
     // dom树ready的时间
     domreadytime: number
@@ -51,8 +55,6 @@ declare namespace Mt {
     onloadtime: number
     // cache 耗时
     appcachetime: number
-    // 跳转耗时
-    redirect: number
     // 重定向次数
     redirectCount?: number
     // 静态资源性能
@@ -61,12 +63,7 @@ declare namespace Mt {
     timing: PerformanceTiming
   }
 
-  export interface IPerformanceEntry {
-    dnstime: number
-    // 请求耗时,从服务器到请求结束
-    requesttime: number
-    // 返回时间
-    responsetime: number
+  export interface IPerformanceEntry extends INetworkPerformance {
     size: number
     name: string
     // 原始性能指标
