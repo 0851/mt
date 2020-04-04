@@ -39,6 +39,7 @@ monitor.run()
 > Collect Performance Data
 
   - data struct **IPerformance**
+  
   ```ts
   export interface INetworkPerformance {
     // dns 耗时
