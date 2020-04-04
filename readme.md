@@ -97,7 +97,7 @@ monitor.run()
 
 ### TODO
 
-- [ ] webpack plugin support auto mounted frontend entry
+- [ ] webpack plugin support auto mounted frontend entry
 - [ ] report data compress
 - [ ] unit test
 - [ ] server platform support analyze report data & alarm
