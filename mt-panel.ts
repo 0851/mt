@@ -1,8 +1,14 @@
+import 'core-js/es6/array'
 import './src/panel/temp.styl'
 import temp from './src/panel/temp.pug'
 import EventBus from './event'
 import { isFunction, autoUnitSize, autoUnitMs } from './src/util'
-import { ChartRender, ChartLineConfigFactory, randomRgbaColors } from './src/panel/chart'
+import {
+  ChartRender,
+  ChartLineConfigFactory,
+  customTooltips,
+  randomRgbaColors
+} from './src/panel/chart'
 import N from 'number-precision'
 
 interface IMtPanel {
@@ -60,7 +66,7 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
   }
   performanceCanvas (dom: HTMLCanvasElement): void {
     if (!this.monitor) return
-    let performance: Mt.IPerformance = Object.assign({}, this.monitor?.performance)
+    let performance: Mt.IPerformance = { ...this.monitor?.performance } as any
     let entries = performance.entries
     type OmitIPerformance = Omit<Mt.IPerformance, 'redirectCount' | 'timing' | 'entries'>
     let networkItemGenerator = (key: keyof Mt.INetworkPerformance) => {
@@ -73,10 +79,15 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
       return {
         total,
         items: [
+          `[总耗时]: ${autoUnitMs(total)}`,
           `[入口]: ${autoUnitMs(performance[key])}`,
-          ...entries.map(item => {
-            return `[${item.name}](${autoUnitSize(item.size)}): ${autoUnitMs(item[key])}`
-          })
+          ...entries.reduce((res: any[], item: any) => {
+            res.push(`--------`)
+            res.push(`[${item.name}]`)
+            res.push(`size: ${autoUnitSize(item.size)}`)
+            res.push(`time: ${autoUnitMs(item[key])}`)
+            return res
+          }, [])
         ]
       }
     }
@@ -90,18 +101,17 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
         value: allnetworktimeItem.total,
         tips: allnetworktimeItem.items
       },
-
       {
         key: 'domreadytime',
         label: 'DOM完成耗时',
         value: performance.domreadytime,
-        tips: performance.domreadytime
+        tips: autoUnitMs(performance.domreadytime)
       },
       {
         key: 'whitetime',
         label: '完全白屏时间',
         value: performance.whitetime,
-        tips: performance.whitetime
+        tips: autoUnitMs(performance.whitetime)
       },
       {
         key: 'dnstime',
@@ -119,7 +129,7 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
         key: 'domcompiletime',
         label: '解析DOM树耗时',
         value: performance.domcompiletime,
-        tips: performance.domcompiletime
+        tips: autoUnitMs(performance.domcompiletime)
       }
     ]
 
@@ -158,20 +168,10 @@ class MtPanel extends EventBus implements Mt.Plugin, IMtPanel {
           display: false
         },
         tooltips: {
-          callbacks: {
-            label: item => {
-              if (!item.yLabel || !item.xLabel) return []
-              let total = autoUnitMs(item.yLabel as number)
-              let res = [total]
-              let find = performances.find(obj => {
-                return item?.xLabel === obj.label
-              })
-              if (find && Array.isArray(find.tips)) {
-                res = res.concat(find.tips)
-              }
-              return res
-            }
-          }
+          enabled: false,
+          mode: 'index',
+          position: 'nearest',
+          custom: customTooltips(performances)
         },
         scales: {
           yAxes: [

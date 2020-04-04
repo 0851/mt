@@ -1,6 +1,6 @@
 .mt-monitor-box
   position fixed;
-  width 360px;
+  width 400px;
   top 10px;
   right 10px;
   color #e1e1e1;
@@ -49,11 +49,19 @@
     display none;
     .mt-panel-canvas
       height 0;
+      position relative;
+      .chartjs-tooltip
+        position absolute;
+        z-index 100000000
+        display inline-block;
+        padding 8px;
+        border-radius 5px;
+        background rgba(0,0,0,0.9);
+        color #fff;
     &.show
       display block;
       .mt-panel-canvas
         height auto;
         width 100%;
-        overflow hidden;
   .mt-performance, .mt-fps, .mt-error, .mt-error
     //height 1000px;
