@@ -90,6 +90,8 @@ monitor.run()
 
 ### plugin panel
 > show frontend monitor data dialog panel
+> 
+> **need import 'mt/dist/mt-panel.css'**
 
 ![](./static/1.png)
 
