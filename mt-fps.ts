@@ -40,7 +40,7 @@ class MtFps extends EventBus implements Mt.Plugin {
   constructor (count?: number, timeout?: number) {
     super()
     this.count = count || 10
-    this.timeout = timeout || 100000
+    this.timeout = timeout || 5000
   }
   apply (monitor: Mt): void {
     this.monitor = monitor
@@ -72,19 +72,18 @@ class MtFps extends EventBus implements Mt.Plugin {
         return
       }
       let now = performancenow()
-      let fs = now - this.lastFameTime
-      this.lastFameTime = now
-      let fps = Math.round(1000 / fs)
       this.frame++
-      if (now > 1000 + this.lastTime) {
-        fps = Math.round((this.frame * 1000) / (now - this.lastTime))
+      // let fs = now - this.lastFameTime
+      // this.lastFameTime = now
+      // let fps = Math.round(1000 / fs)
+      if (now - this.lastTime > 1000) {
+        this.lists.push(this.frame)
         this.frame = 0
         this.lastTime = now
       }
-      if (this.lists.length >= this.count) {
+      if (this.lists.length > this.count) {
         this.lists.splice(0, 1)
       }
-      this.lists.push(fps)
       if (this.timer) {
         cancelAnimationFrame(this.timer)
       }

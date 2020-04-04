@@ -80,10 +80,10 @@ export function ChartLineConfigFactory (
               zeroLineColor: 'rgb(100,100,100,0.5)'
             },
             ticks: {
-              // beginAtZero: true,
-              // min: 0,
-              // suggestedMin: 0,
-              stepSize: 0.1
+              beginAtZero: true,
+              min: 0,
+              suggestedMin: 0
+              // stepSize: 0.1
             }
           }
         ]
