@@ -1,5 +1,5 @@
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var noop = function () {
     //
 };
@@ -26,9 +26,10 @@ var MTWebpackPlugin = /** @class */ (function () {
         console.log('===');
     }
     MTWebpackPlugin.prototype.apply = function (compiler) {
-        console.log(compiler);
+        // console.log(compiler)
     };
-    MTWebpackPlugin.loader = require.resolve('./webpack-loader-cjs.js');
+    MTWebpackPlugin.loader = require.resolve('./loader.js');
     return MTWebpackPlugin;
 }());
-exports["default"] = MTWebpackPlugin;
+exports.default = MTWebpackPlugin;
+//# sourceMappingURL=webpack-plugin.js.map

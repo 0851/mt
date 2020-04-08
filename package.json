@@ -7,16 +7,14 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ksr dev -e index.html -p 8991 -h 0.0.0.0 --static ./",
     "build": "rm -rf dist && npm run build-index && npm run build-main && npm run build-panel && npm run build-error && npm run build-fps && npm run build-event && build-webpack-plugin",
-    "watch": "concurrently -r --kill-others-on-fail  'npm run build-webpack-plugin-watch' 'npm run build-webpack-loader-watch'",
+    "watch": "concurrently -r --kill-others-on-fail  'npm run build-webpack-plugin-watch'",
     "build-index": "ksr build -e index.html:path=test/index.html --min false",
     "build-main": "ksr build -e mt.ts:path=mt --hash false --library Mt --target umd",
     "build-panel": "ksr build -e mt-panel.ts:path=mt-panel --hash false --library MtPanel --target umd",
     "build-error": "ksr build -e mt-error.ts:path=mt-error --hash false --library MtError --target umd",
     "build-fps": "ksr build -e mt-fps.ts:path=mt-fps --hash false --library MtFps --target umd",
-    "build-webpack-plugin": "cp webpack-plugin-cjs.js dist/webpack-plugin-cjs.js && ksr build -e webpack-plugin.ts:path=webpack-plugin --hash false --target commonjs2",
+    "build-webpack-plugin": "tsc -p webpack/tsconfig-plugin.json",
     "build-webpack-plugin-watch": "npm run build-webpack-plugin -- --watch",
-    "build-webpack-loader": "cp webpack-loader-cjs.js dist/webpack-loader-cjs.js && ksr build -e webpack-loader.ts:path=webpack-loader --hash false --target commonjs2",
-    "build-webpack-loader-watch": "npm run build-webpack-loader -- --watch",
     "build-event": "ksr build -e event.ts:path=event --hash false --library EventBus --target umd",
     "fix-lint": "tslint -p tsconfig.json --fix",
     "lint": "tslint -p tsconfig.json -t verbose"
@@ -25,7 +23,8 @@
   "license": "MIT",
   "dependencies": {
     "chart.js": "^2.9.3",
-    "number-precision": "^1.3.2"
+    "number-precision": "^1.3.2",
+    "typescript": "^3.8.3"
   },
   "devDependencies": {
     "@types/chart.js": "^2.9.18",

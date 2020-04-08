@@ -1,4 +1,4 @@
-const MTWebpackPlugin = require('../dist/webpack-plugin-cjs.js')
+const MTWebpackPlugin = require('../dist/webpack/plugin')
 let p = new MTWebpackPlugin()
 console.log(MTWebpackPlugin.loader)
 module.exports = function () {
@@ -6,8 +6,9 @@ module.exports = function () {
     module: {
       rules: [
         {
-          test: /.js$/,
+          test: /\.js$/,
           loader: MTWebpackPlugin.loader,
+          exclude: [/node_modules/],
         },
       ],
     },

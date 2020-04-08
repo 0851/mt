@@ -34,9 +34,9 @@ class MTWebpackPlugin {
     console.log('===')
   }
   apply (compiler: webpack.Compiler) {
-    console.log(compiler)
+    // console.log(compiler)
   }
-  static loader = require.resolve('./webpack-loader-cjs.js')
+  static loader = require.resolve('./loader.js')
 }
 
 export default MTWebpackPlugin
