@@ -43,3 +43,74 @@ interface ITack {
   target: IElement
   paths: IElement[]
 }
+
+type IReportType =
+  | 'fps'
+  | 'performance'
+  | 'windowError'
+  | 'rejectionError'
+  | 'unHandledRejectionError'
+  | 'xhrError'
+  | 'xhrCatchError'
+  | 'fetchError'
+  | 'fetchCatchError'
+  | 'consoleError'
+  | 'vueError'
+  | 'requestTime'
+  | 'custom'
+
+interface IFpsReport {
+  fps: number[]
+}
+interface IPerformanceReport extends Mt.IPerformance {}
+interface IErrorReportSource {
+  filename?: string
+  colno: number
+  lineno: number
+}
+interface IErrorReport {
+  // 0-3, 0为严重,1高,2中,3低
+  level: number
+  time: number
+  message: string
+  stack?: string
+  tracks?: ITack[]
+  source?: IErrorReportSource
+}
+
+interface IWindowErrorReport extends IErrorReport {}
+interface IRejectionErrorReport extends IErrorReport {}
+interface IUnHandledRejectionErrorReport extends IErrorReport {}
+interface IXhrCatchErrorReport extends IErrorReport {}
+interface IVueErrorReport extends IErrorReport {}
+interface IConsoleErrorReport extends IErrorReport {}
+interface IFetchCatchErrorReport extends IErrorReport {}
+interface IXhrErrorReport extends IErrorReport {}
+interface IFetchErrorReport extends IErrorReport {}
+
+interface IRequestTime {
+  startTime: number
+  endTime: number
+  time: number
+  path: string
+}
+
+type IReportPayload =
+  | IFpsReport
+  | IPerformanceReport
+  | IWindowErrorReport
+  | IRejectionErrorReport
+  | IUnHandledRejectionErrorReport
+  | IXhrErrorReport
+  | IXhrCatchErrorReport
+  | IFetchErrorReport
+  | IFetchCatchErrorReport
+  | IConsoleErrorReport
+  | IVueErrorReport
+  | IRequestTime
+  | any
+
+interface IReport {
+  type: IReportType
+  payload: IReportPayload
+}

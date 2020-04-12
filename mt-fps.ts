@@ -57,7 +57,12 @@ class MtFps extends EventBus implements Mt.Plugin {
   reportFps () {
     if (!this.monitor) return
     setTimeout(() => {
-      this.monitor?.report('fps', this.lists)
+      this.monitor?.report({
+        type: 'fps',
+        payload: {
+          fps: this.lists
+        }
+      })
       this.emit('fps:logs', this.lists)
       this.reportFps()
     }, this.timeout)

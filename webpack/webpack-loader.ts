@@ -4,7 +4,6 @@ function MTWebpackPluginLoader (
   source: string | Buffer,
   sourceMap?: any
 ): string | Buffer | void | undefined {
-  console.log('====+++=', source)
   return source
 }
 export default MTWebpackPluginLoader

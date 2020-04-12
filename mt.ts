@@ -34,9 +34,9 @@ class Mt extends EventBus {
     return this
   }
   getTime = getTime
-  report (type: string, data: any) {
+  report (data: IReport | IReport[]) {
     if (!this.reportUrl) return
-    report(this.reportUrl, this.product, this.uid, type, data)
+    report(this.reportUrl, this.product, this.uid, data)
   }
   run () {
     isReady(() => {
@@ -96,7 +96,10 @@ class Mt extends EventBus {
         timing: timing
       }
       this.performance = perf
-      this.report('performance', perf)
+      this.report({
+        type: 'performance',
+        payload: perf
+      })
     }
   }
 }

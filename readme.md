@@ -98,7 +98,12 @@ monitor.run()
 
 ### TODO
 
-- [ ] webpack plugin support auto mounted frontend entry
-- [ ] report data compress
+- [ ] ~~webpack plugin support auto mounted frontend entry~~
+- [ ] ~~report data compress~~
+- [ ] vue error report
+- [ ] console.error report
+- [ ] request time
+- [ ] pv,uv
+- [ ] reset report data interface
 - [ ] unit test
 - [ ] server platform support analyze report data & alarm

@@ -15,7 +15,7 @@ declare class Mt extends EventBus {
   run(): void
   trackId: string
   trackIdGenerator(): void
-  report(type: string, data: any): void
+  report(data: IReport | IReport[]): void
   [key: string]: any
 }
 declare namespace Mt {

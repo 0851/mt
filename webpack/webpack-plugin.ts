@@ -31,10 +31,10 @@ function hookTap (
 }
 class MTWebpackPlugin {
   constructor () {
-    console.log('===')
+    //
   }
   apply (compiler: webpack.Compiler) {
-    // console.log(compiler)
+    //
   }
   static loader = require.resolve('./loader.js')
 }

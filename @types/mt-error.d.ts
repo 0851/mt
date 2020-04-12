@@ -1,4 +1,5 @@
 import EventBus from './event.d'
+import { VueConstructor } from 'vue'
 export as namespace MtError
 export = MtError
 
@@ -6,22 +7,27 @@ declare class MtError extends EventBus implements Mt.Plugin {
   tracks: ITack[]
   brokeTimeout: number
   hasTrack: boolean
-  logs: any[]
-  tracksMax: number
-  logsMergeMax: number
+  logs: {
+    top: IReport[]
+    high: IReport[]
+    medium: IReport[]
+    low: IReport[]
+    requestTime: IReport[]
+  }
+  tracksCount: number
+  highCount: number
+  mediumCount: number
+  lowCount?: number
+  requestTimeCount?: number
   native: any
   worker?: Worker
   monitor?: Mt
-  constructor(
-    brokeTimeout: number,
-    tracksMax: number,
-    logsMergeMax: number,
-    hasTrack?: boolean
-  )
+  config: MtError.IConfig
+  consoleErr: boolean
+  constructor(config: MtError.IConfig)
   apply(monitor: Mt): void
   broke(): void
   addTrack(item: ITack): void
-  report(type: string, data: any, force?: boolean): void
   recordTrack(): void
   unHijack(): void
   hijack(): void
@@ -35,4 +41,17 @@ declare class MtError extends EventBus implements Mt.Plugin {
   hijackXmlHttpRequest(): void
   unHijackFetch(): void
   hijackFetch(): void
+}
+declare namespace MtError {
+  export interface IConfig {
+    brokeTimeout?: number
+    tracksCount?: number
+    highCount?: number
+    mediumCount?: number
+    requestTimeCount?: number
+    lowCount?: number
+    hasTrack?: boolean
+    consoleErr?: boolean
+    vue?: VueConstructor
+  }
 }

@@ -5,27 +5,41 @@ import { debounce, domPaths, getEl, makeWorker, request, isFunction } from './sr
 
 class MtError extends EventBus implements Mt.Plugin {
   tracks: ITack[] = []
-  brokeTimeout: number = 5000
-  hasTrack: boolean = true
-  logs: any[] = []
-  tracksMax: number = 1000
-  logsMergeMax: number = 100
+  brokeTimeout: number
+  hasTrack: boolean
+  logs: {
+    high: IReport[]
+    medium: IReport[]
+    low: IReport[]
+    requestTime: IReport[]
+  } = {
+    high: [],
+    medium: [],
+    low: [],
+    requestTime: []
+  }
+  tracksCount: number
+  highCount: number
+  mediumCount: number
+  lowCount: number
+  requestTimeCount: number
   native: any
   worker?: Worker
   monitor?: Mt
-  constructor (
-    brokeTimeout: number,
-    tracksMax: number,
-    logsMergeMax: number,
-    hasTrack: boolean = true
-  ) {
+  config: MtError.IConfig
+  consoleErr: boolean
+  constructor (config: MtError.IConfig) {
     super()
     this.tracks = []
-    this.logs = []
-    this.logsMergeMax = logsMergeMax
-    this.hasTrack = hasTrack
-    this.brokeTimeout = brokeTimeout
-    this.tracksMax = tracksMax
+    this.highCount = config.highCount === undefined ? 10 : config.highCount
+    this.mediumCount = config.mediumCount === undefined ? 100 : config.mediumCount
+    this.lowCount = config.lowCount === undefined ? 500 : config.lowCount
+    this.requestTimeCount = config.requestTimeCount === undefined ? 500 : config.requestTimeCount
+    this.hasTrack = config.hasTrack === undefined ? true : config.hasTrack
+    this.brokeTimeout = config.brokeTimeout === undefined ? 5000 : config.brokeTimeout
+    this.tracksCount = config.tracksCount === undefined ? 2000 : config.tracksCount
+    this.consoleErr = config.consoleErr === undefined ? true : config.consoleErr
+    this.config = config
     this.native = this.native || {}
   }
   apply (monitor: Mt): void {
@@ -128,29 +142,71 @@ class MtError extends EventBus implements Mt.Plugin {
     })
   }
   addTrack (item: ITack) {
-    if (this.tracks.length >= this.tracksMax) {
+    if (this.tracks.length >= this.tracksCount) {
       this.tracks.splice(0, 1)
     }
     this.tracks.push(item)
   }
-  report (type: string, data: any, force: boolean = true) {
+  limitReport (
+    key: 'high' | 'medium' | 'low' | 'requestTime',
+    countKey: 'highCount' | 'mediumCount' | 'lowCount' | 'requestTimeCount',
+    type: IReportType,
+    payload: IErrorReport | IRequestTime
+  ) {
+    if (!this.monitor) return
+    this.logs[key] = Array.isArray(this.logs[key]) ? this.logs[key] : []
+    if (this.logs[key].length <= this[countKey]) {
+      this.logs[key].push({
+        type: type,
+        payload: payload
+      })
+    } else {
+      this.monitor?.report(this.logs[key])
+      this.logs[key] = []
+    }
+  }
+  reportError (
+    type: IReportType,
+    level: number,
+    time: number,
+    error: Error,
+    source?: IErrorReportSource
+  ) {
     if (!this.monitor) return
     let tracks = this.tracks.slice(
       Math.max(0, this.tracks.length - 50),
       this.tracks.length
     )
-    let re = {
+    let e: IErrorReport = {
+      level,
+      time,
+      message: error.message,
+      stack: error.stack,
       tracks,
-      data
+      source
     }
-    this.logs.push(re)
-    if (force === true) {
-      this.monitor?.report(type, this.logs)
-    } else if (this.logs.length >= this.logsMergeMax) {
-      this.monitor?.report(type, this.logs)
+    this.emit('err:logs', e)
+    switch (level) {
+      // 严重
+      case 0:
+        this.monitor?.report({
+          type: type,
+          payload: e
+        })
+        break
+      // 高
+      case 1:
+        this.limitReport('high', 'highCount', type, e)
+        break
+      // 中
+      case 2:
+        this.limitReport('medium', 'mediumCount', type, e)
+        break
+      // 低
+      case 3:
+        this.limitReport('low', 'lowCount', type, e)
+        break
     }
-    this.emit('err:logs', this.logs)
-    this.logs = []
   }
   recordTrack () {
     let self = this
@@ -205,6 +261,8 @@ class MtError extends EventBus implements Mt.Plugin {
     this.unHijackFn()
     this.unHijackXmlHttpRequest()
     this.unHijackFetch()
+    this.unHijackConsoleError()
+    this.unHijackVueError()
   }
   hijack () {
     if (!this.native) {
@@ -215,6 +273,45 @@ class MtError extends EventBus implements Mt.Plugin {
     this.hijackFn()
     this.hijackXmlHttpRequest()
     this.hijackFetch()
+    this.hijackConsoleError()
+    this.hijackVueError()
+  }
+  unHijackConsoleError () {
+    let self = this
+    setTimeout(function () {
+      if (!self.native.consoleError) {
+        return
+      }
+      console.error = self.native.consoleError
+    }, 1)
+  }
+  hijackConsoleError () {
+    let self = this
+    setTimeout(function () {
+      self.native.consoleError = console.error
+      console.error = function (...arg: any[]) {
+        self.native.consoleError.call(this, ...arg)
+      }
+    }, 0)
+  }
+  unHijackVueError () {
+    let self = this
+    setTimeout(function () {
+      if (!self.native.vueErrorHandler || self.config.vue === undefined) {
+        return
+      }
+    }, 1)
+  }
+  hijackVueError () {
+    let self = this
+    if (self.config.vue === undefined) return
+    setTimeout(function () {
+      if (self.config.vue === undefined) return
+      self.native.vueErrorHandler = self.config.vue.config.errorHandler
+      self.config.vue.config.errorHandler = function (err: Error, vm: Vue, info: string) {
+        console.log(err)
+      }
+    }, 0)
   }
   private addEventListenerFn (old: any, weakmap: WeakMap<any, any>) {
     let self = this

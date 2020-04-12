@@ -310,23 +310,27 @@ export function report (
   url: string,
   product: string,
   uid: string,
-  type: string,
   data: any
 ) {
+  let q = ''
+  try {
+    q = btoa(JSON.stringify(data))
+  } catch (error) {
+    //
+  }
   setTimeout(function () {
     let payload = {
-      type: type,
       uid: uid,
       product: product,
       url: url,
-      data: JSON.stringify(data)
+      data: q
     }
     if (!worker) {
-      console.log(type, 'request report type', payload)
+      console.log('request report type', payload)
       request('post', `${payload.url}?d=${Math.random()}`, payload, 3)
       return
     }
-    console.log(type, 'worker report type', payload)
+    console.log('worker report type', payload)
     worker.postMessage(payload)
   }, 1000)
 }

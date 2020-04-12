@@ -33,6 +33,7 @@
     "ksr": "^3.8.6",
     "tslint": "^6.1.0",
     "tslint-config-standard": "^9.0.0",
+    "vue": "^2.6.11",
     "webpack": "^4.42.1"
   }
 }
