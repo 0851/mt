@@ -19,11 +19,12 @@
     "serve": "ksr-serve -h 0.0.0.0 -p 3601",
     "fix-lint": "tslint -p tsconfig.json --fix",
     "lint": "tslint -p tsconfig.json -t verbose",
-    "release": "npm run release-patch",
-    "prelease": "npm run build && git add . && git commit -am 'prelease...' && npm version prerelease && git push --tags --force && git push && npm publish",
-    "release-patch": "npm run build && git add . && git commit -am 'release-patch...' && npm version patch && git push --tags && git push && npm publish",
-    "release-minor": "npm run build && git add . && git commit -am 'release-minor...' && npm version minor && git push --tags && git push && npm publish",
-    "release-major": "npm run build && git add . && git commit -am 'release-major...' && npm version major && git push --tags && git push && npm publish"
+    "buildcommit": "npm run build && git add . && git commit -am 'build...'",
+    "release": "npm run buildcommit && npm run release-patch",
+    "prelease": "npm version prerelease && git push --tags --force && git push && npm publish",
+    "release-patch": "npm version patch && git push --tags && git push && npm publish",
+    "release-minor": "npm version minor && git push --tags && git push && npm publish",
+    "release-major": "npm version major && git push --tags && git push && npm publish"
   },
   "author": "",
   "license": "MIT",
