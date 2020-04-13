@@ -37,17 +37,11 @@
     "@types/chart.js": "^2.9.18",
     "@types/webpack": "^4.41.10",
     "concurrently": "^5.1.0",
-    "ksr": "^3.8.6",
+    "ksr": "^4.0.0",
     "tslint": "^6.1.0",
     "tslint-config-standard": "^9.0.0",
     "vue": "^2.6.11",
     "webpack": "^4.42.1"
-  },
-  "browserslist": [
-    "Chrome >= 50"
-  ],
-  "directories": {
-    "test": "test"
   },
   "repository": {
     "type": "git",

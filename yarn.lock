@@ -865,14 +865,6 @@
     "@babel/helper-create-regexp-features-plugin" "^7.8.3"
     "@babel/helper-plugin-utils" "^7.8.3"
 
-"@babel/polyfill@^7.8.7":
-  version "7.8.7"
-  resolved "https://registry.yarnpkg.com/@babel/polyfill/-/polyfill-7.8.7.tgz#151ec24c7135481336168c3bd8b8bf0cf91c032f"
-  integrity sha512-LeSfP9bNZH2UOZgcGcZ0PIHUt1ZuHub1L3CVmEyqLxCeDLm4C5Gi8jRH8ZX2PNpDhQCo0z6y/+DIs2JlliXW8w==
-  dependencies:
-    core-js "^2.6.5"
-    regenerator-runtime "^0.13.4"
-
 "@babel/preset-env@^7.8.7":
   version "7.9.0"
   resolved "https://registry.yarnpkg.com/@babel/preset-env/-/preset-env-7.9.0.tgz#a5fc42480e950ae8f5d9f8f2bbc03f52722df3a8"
@@ -1050,6 +1042,15 @@
     chalk "^2.4.1"
     globby "^8.0.2"
     lodash "^4.17.10"
+
+"@ksyun/mt@0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@ksyun/mt/-/mt-0.0.2.tgz#014b2e4aea5ef7f2f0b7a095e2a1878b895b220e"
+  integrity sha512-LGZKs10W76h7Ae8hv5QcbmhHODJzuhfLTKhZg85noaAfW6rJaCCqFKwIgue566jTiC96Ijl74iWQY10dRE8MDg==
+  dependencies:
+    chart.js "^2.9.3"
+    number-precision "^1.3.2"
+    typescript "^3.8.3"
 
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
@@ -2571,7 +2572,7 @@ core-js-pure@^3.0.0:
   resolved "https://registry.yarnpkg.com/core-js-pure/-/core-js-pure-3.6.4.tgz#4bf1ba866e25814f149d4e9aaa08c36173506e3a"
   integrity sha512-epIhRLkXdgv32xIUFaaAry2wdxZYBi6bgM7cB136dzzXXa+dFyRLTZeLUJxnd8ShrmyVXBub63n2NHo2JAt8Cw==
 
-core-js@^2.4.0, core-js@^2.6.5:
+core-js@^2.4.0:
   version "2.6.11"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.6.11.tgz#38831469f9922bded8ee21c9dc46985e0399308c"
   integrity sha512-5wjnpaT/3dV+XB4borEsnAYQchn00XSgTAWKDkEqv+K8KevjbzmofK6hfJ9TZIlpj2N0xQpazy7PiRQiWHqzWg==
@@ -4886,10 +4887,10 @@ ksc-webpack-plugins@^1.0.11:
     webfont "^8.1.2"
     webpack "^4.4.1"
 
-ksr@^3.8.6:
-  version "3.8.6"
-  resolved "https://registry.yarnpkg.com/ksr/-/ksr-3.8.6.tgz#628e146b7cf7b88e7a8d4e11c0c10333c43552d7"
-  integrity sha512-dXXsOrbUD7rvZ+I6s/QlgNbnG1J7g45zShfo04ikLiyD5DmfSoO5O4gXY1sMdNODJhRA3PJc9S4PtsiTMnkDpA==
+ksr@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/ksr/-/ksr-4.0.0.tgz#3d3f283b931eec490d8f56aaebedff4a546bab99"
+  integrity sha512-BgdAscPY46+qNtjzqxxW3V/9Lfr2EJBEiD2ipndG15FfDL9e/R5KqAAQfujYZ9Nmf5n04VrR1HGOyS73oNLnjA==
   dependencies:
     "@babel/core" "^7.8.7"
     "@babel/plugin-proposal-class-properties" "^7.0.0"
@@ -4913,11 +4914,11 @@ ksr@^3.8.6:
     "@babel/plugin-transform-destructuring" "^7.8.3"
     "@babel/plugin-transform-runtime" "^7.8.3"
     "@babel/plugin-transform-spread" "^7.8.3"
-    "@babel/polyfill" "^7.8.7"
     "@babel/preset-env" "^7.8.7"
     "@babel/preset-react" "^7.8.3"
     "@babel/runtime-corejs3" "^7.9.2"
     "@ksyun/ksr-libs" "^3.1.3"
+    "@ksyun/mt" "0.0.2"
     "@vue/babel-helper-vue-jsx-merge-props" "^1.0.0"
     "@vue/babel-preset-jsx" "^1.1.2"
     acorn "^7.1.1"
@@ -4980,6 +4981,7 @@ ksr@^3.8.6:
     vue-template-compiler "^2.5.16"
     webpack "^4.4.1"
     webpack-merge "^4.1.3"
+    webpack-plugin-replace "^1.2.0"
 
 kuler@1.0.x:
   version "1.0.1"
@@ -8549,6 +8551,11 @@ webpack-merge@^4.1.3:
   integrity sha512-TUE1UGoTX2Cd42j3krGYqObZbOD+xF7u28WB7tfUordytSjbWTIjK/8V0amkBfTYN4/pB/GIDlJZZ657BGG19g==
   dependencies:
     lodash "^4.17.15"
+
+webpack-plugin-replace@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/webpack-plugin-replace/-/webpack-plugin-replace-1.2.0.tgz#3f20db96237400433231e35ea76d9be3f7128916"
+  integrity sha512-1HA3etHpJW55qonJqv84o5w5GY7iqF8fqSHpTWdNwarj1llkkt4jT4QSvYs1hoaU8Lu5akDnq/spHHO5mXwo1w==
 
 webpack-sources@^1.1.0, webpack-sources@^1.4.0, webpack-sources@^1.4.1:
   version "1.4.3"
