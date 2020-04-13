@@ -21,8 +21,8 @@ declare class Mt extends EventBus {
 declare namespace Mt {
   export interface IConfig {
     reportUrl?: string
-    product: string
-    uid: string
+    product?: string
+    uid?: string
   }
   export interface Plugin extends EventBus {
     apply(monitor: Mt): void

@@ -15,8 +15,8 @@ class Mt extends EventBus {
     super()
     this.reportUrl = config.reportUrl
     this.plugins = []
-    this.uid = config.uid
-    this.product = config.product
+    this.uid = config.uid || this.trackIdGenerator()
+    this.product = config.product || 'main'
     this.trackId = this.trackIdGenerator()
   }
   trackIdGenerator () {
