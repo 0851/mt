@@ -55,6 +55,7 @@ type IReportType =
   | 'fetchError'
   | 'fetchCatchError'
   | 'consoleError'
+  | 'consoleWarn'
   | 'vueError'
   | 'requestTime'
   | 'custom'
@@ -65,8 +66,8 @@ interface IFpsReport {
 interface IPerformanceReport extends Mt.IPerformance {}
 interface IErrorReportSource {
   filename?: string
-  colno: number
-  lineno: number
+  colno?: number
+  lineno?: number
 }
 interface IErrorReport {
   // 0-3, 0为严重,1高,2中,3低
@@ -84,14 +85,15 @@ interface IUnHandledRejectionErrorReport extends IErrorReport {}
 interface IXhrCatchErrorReport extends IErrorReport {}
 interface IVueErrorReport extends IErrorReport {}
 interface IConsoleErrorReport extends IErrorReport {}
+interface IConsoleWarnReport extends IErrorReport {}
 interface IFetchCatchErrorReport extends IErrorReport {}
 interface IXhrErrorReport extends IErrorReport {}
 interface IFetchErrorReport extends IErrorReport {}
 
 interface IRequestTime {
-  startTime: number
-  endTime: number
-  time: number
+  startTime?: number
+  endTime?: number
+  time?: number
   path: string
 }
 
@@ -106,6 +108,7 @@ type IReportPayload =
   | IFetchErrorReport
   | IFetchCatchErrorReport
   | IConsoleErrorReport
+  | IConsoleWarnReport
   | IVueErrorReport
   | IRequestTime
   | any

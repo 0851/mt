@@ -34,7 +34,8 @@ class MtError extends EventBus implements Mt.Plugin {
     this.highCount = config.highCount === undefined ? 10 : config.highCount
     this.mediumCount = config.mediumCount === undefined ? 100 : config.mediumCount
     this.lowCount = config.lowCount === undefined ? 500 : config.lowCount
-    this.requestTimeCount = config.requestTimeCount === undefined ? 500 : config.requestTimeCount
+    this.requestTimeCount =
+      config.requestTimeCount === undefined ? 500 : config.requestTimeCount
     this.hasTrack = config.hasTrack === undefined ? true : config.hasTrack
     this.brokeTimeout = config.brokeTimeout === undefined ? 5000 : config.brokeTimeout
     this.tracksCount = config.tracksCount === undefined ? 2000 : config.tracksCount
@@ -78,10 +79,11 @@ class MtError extends EventBus implements Mt.Plugin {
               'post',
               `${obj.url}?d=${Math.random()}`,
               {
-                type: 'crash',
                 uid: obj.uid,
+                url: obj.url,
                 product: obj.product,
                 data: JSON.stringify({
+                  type: 'crash',
                   href: obj.href,
                   trackId: obj.trackId,
                   tracks: tracks
@@ -141,18 +143,12 @@ class MtError extends EventBus implements Mt.Plugin {
       }
     })
   }
-  addTrack (item: ITack) {
-    if (this.tracks.length >= this.tracksCount) {
-      this.tracks.splice(0, 1)
-    }
-    this.tracks.push(item)
-  }
   limitReport (
-    key: 'high' | 'medium' | 'low' | 'requestTime',
-    countKey: 'highCount' | 'mediumCount' | 'lowCount' | 'requestTimeCount',
+    key: MtError.logType,
+    countKey: MtError.logCountType,
     type: IReportType,
     payload: IErrorReport | IRequestTime
-  ) {
+  ): void {
     if (!this.monitor) return
     this.logs[key] = Array.isArray(this.logs[key]) ? this.logs[key] : []
     if (this.logs[key].length <= this[countKey]) {
@@ -165,13 +161,27 @@ class MtError extends EventBus implements Mt.Plugin {
       this.logs[key] = []
     }
   }
+  forceReport (type?: MtError.logType): void {
+    let self = this
+    if (!self.monitor) return
+    if (type !== undefined) {
+      self.monitor?.report(self.logs[type])
+      self.logs[type] = []
+      return
+    }
+    let keys: MtError.logType[] = Object.keys(self.logs) as MtError.logType[]
+    keys.forEach(function (key: MtError.logType) {
+      self.monitor?.report(self.logs[key])
+      self.logs[key] = []
+    })
+  }
   reportError (
     type: IReportType,
     level: number,
     time: number,
     error: Error,
     source?: IErrorReportSource
-  ) {
+  ): void {
     if (!this.monitor) return
     let tracks = this.tracks.slice(
       Math.max(0, this.tracks.length - 50),
@@ -208,6 +218,13 @@ class MtError extends EventBus implements Mt.Plugin {
         break
     }
   }
+  addTrack (item: ITack) {
+    if (this.tracks.length >= this.tracksCount) {
+      this.tracks.splice(0, 1)
+    }
+    this.tracks.push(item)
+  }
+
   recordTrack () {
     let self = this
     if (!self.monitor) return
@@ -261,7 +278,7 @@ class MtError extends EventBus implements Mt.Plugin {
     this.unHijackFn()
     this.unHijackXmlHttpRequest()
     this.unHijackFetch()
-    this.unHijackConsoleError()
+    this.unHijackConsole()
     this.unHijackVueError()
   }
   hijack () {
@@ -273,24 +290,69 @@ class MtError extends EventBus implements Mt.Plugin {
     this.hijackFn()
     this.hijackXmlHttpRequest()
     this.hijackFetch()
-    this.hijackConsoleError()
+    this.hijackConsole()
     this.hijackVueError()
   }
-  unHijackConsoleError () {
+  unHijackConsole () {
     let self = this
     setTimeout(function () {
       if (!self.native.consoleError) {
         return
       }
+      console.warn = self.native.consoleWarn
       console.error = self.native.consoleError
     }, 1)
   }
-  hijackConsoleError () {
+  argToStr (...args: any[]): string {
+    return args
+      .map((arg: any) => {
+        let str = ''
+        switch (typeof arg) {
+          case 'string':
+            str = arg
+            break
+          case 'number':
+            str = arg + ''
+            break
+          case 'object':
+            try {
+              str = JSON.stringify(arg)
+            } catch (error) {
+              //
+            }
+            break
+        }
+        return str
+      })
+      .filter(function (item) {
+        return item !== ''
+      })
+      .join('$$')
+  }
+  hijackConsole () {
     let self = this
     setTimeout(function () {
       self.native.consoleError = console.error
+      self.native.consoleWarn = console.warn
       console.error = function (...arg: any[]) {
         self.native.consoleError.call(this, ...arg)
+        if (!self.monitor) return
+        self.reportError(
+          'consoleError',
+          1,
+          self.monitor.getTime(),
+          new Error(self.argToStr(arg))
+        )
+      }
+      console.error = function (...arg: any[]) {
+        self.native.consoleWarn.call(this, ...arg)
+        if (!self.monitor) return
+        self.reportError(
+          'consoleWarn',
+          2,
+          self.monitor.getTime(),
+          new Error(self.argToStr(arg))
+        )
       }
     }, 0)
   }
@@ -300,6 +362,7 @@ class MtError extends EventBus implements Mt.Plugin {
       if (!self.native.vueErrorHandler || self.config.vue === undefined) {
         return
       }
+      self.config.vue.config.errorHandler = self.native.vueErrorHandler
     }, 1)
   }
   hijackVueError () {
@@ -309,7 +372,10 @@ class MtError extends EventBus implements Mt.Plugin {
       if (self.config.vue === undefined) return
       self.native.vueErrorHandler = self.config.vue.config.errorHandler
       self.config.vue.config.errorHandler = function (err: Error, vm: Vue, info: string) {
-        console.log(err)
+        self.native.vueErrorHandler.call(this, err, vm, info)
+        if (!self.monitor) return
+        err.message = err.message + `[el: ${getEl(vm.$el)}]` + `[info: ${info}]`
+        self.reportError('vueError', 1, self.monitor.getTime(), err)
       }
     }, 0)
   }
@@ -324,10 +390,12 @@ class MtError extends EventBus implements Mt.Plugin {
             }
             return fn(...arg)
           } catch (error) {
-            if (!self.monitor) return
-            let time = self.monitor.getTime()
-            let stack = new Error(`Event ${type} ${time}`).stack
-            error.stack = stack + '\n' + error.stack
+            let stack = []
+            if (error.stack) {
+              stack.push(error.stack)
+            }
+            stack.push(`Event ${type}`)
+            error.stack = stack.join('\n')
             throw error
           }
         }
@@ -459,10 +527,12 @@ class MtError extends EventBus implements Mt.Plugin {
         try {
           return fn.call(this, ...arg)
         } catch (error) {
-          if (!self.monitor) return
-          let time = self.monitor.getTime()
-          let stack = new Error(`ReFnError ${key} ${time}`).stack
-          error.stack = stack + '\n' + error.stack
+          let stack = []
+          if (error.stack) {
+            stack.push(error.stack)
+          }
+          stack.push(`ReFnError ${key}`)
+          error.stack = stack.join('\n')
           throw error
         }
       }
@@ -499,10 +569,7 @@ class MtError extends EventBus implements Mt.Plugin {
     ) {
       if (!self.monitor) return
       let time = self.monitor.getTime()
-      self.report('RejectionhandledError', {
-        time: time,
-        error: e.reason
-      })
+      self.reportError('rejectionError', 0, time, new Error(e.reason))
     })
     self.native.globalErrorListeners.set('unhandledrejection', function (
       e: PromiseRejectionEvent
@@ -510,10 +577,7 @@ class MtError extends EventBus implements Mt.Plugin {
       if (!self.monitor) return
 
       let time = self.monitor.getTime()
-      self.report('UnhandledrejectionError', {
-        time: time,
-        error: e.reason
-      })
+      self.reportError('unHandledRejectionError', 0, time, new Error(e.reason))
     })
 
     window.addEventListener(
@@ -539,6 +603,7 @@ class MtError extends EventBus implements Mt.Plugin {
         let time = self.monitor.getTime()
         let message: any = event || error?.message
         let stack: any = error?.stack || ''
+        error = error || new Error(message)
         try {
           let onerror = self.native.globalErrorListeners.get('onerror')
           if (isFunction(onerror)) {
@@ -549,15 +614,11 @@ class MtError extends EventBus implements Mt.Plugin {
             stack = e.stack + '\n' + stack
           }
         }
-        self.report('WindowError', {
-          time: time,
-          data: {
-            source: source,
-            colno: colno,
-            lineno: lineno,
-            message: message,
-            stack: stack
-          }
+        error.stack = stack
+        self.reportError('windowError', 0, time, error, {
+          filename: source,
+          colno: colno,
+          lineno: lineno
         })
       }
     }, 0)
@@ -594,6 +655,7 @@ class MtError extends EventBus implements Mt.Plugin {
     ) {
       const xhrInstance: any = this
       xhrInstance._url = url
+      xhrInstance._startTime = self.monitor?.getTime()
       return self.native.xhr
         .get('open')
         .call(xhrInstance, mothod, url, async as any, username, password)
@@ -602,19 +664,22 @@ class MtError extends EventBus implements Mt.Plugin {
     XMLHttpRequest.prototype.send = function (...args) {
       const oldCb = this.onreadystatechange
       const xhrInstance: any = this
-
       xhrInstance.addEventListener('error', function (e: any) {
         if (xhrInstance._stopLog === true) return
         if (!self.monitor) return
         let time = self.monitor.getTime()
-        self.report('XMLHttpRequestCatchError', {
-          time: time,
-          error: {
-            status: xhrInstance.status,
-            statusText: xhrInstance.statusText,
-            native: xhrInstance
-          }
-        })
+        self.reportError(
+          'xhrCatchError',
+          0,
+          time,
+          new Error(
+            JSON.stringify({
+              status: xhrInstance.status,
+              statusText: xhrInstance.statusText,
+              native: xhrInstance
+            })
+          )
+        )
       })
 
       xhrInstance.addEventListener('abort', function (e: any) {
@@ -625,17 +690,31 @@ class MtError extends EventBus implements Mt.Plugin {
 
       this.onreadystatechange = function (...innerArgs) {
         if (xhrInstance.readyState === 4) {
-          if (!xhrInstance._isAbort && xhrInstance.status !== 200) {
+          if (xhrInstance._isAbort) {
+            return
+          }
+          if (!self.monitor) return
+          let time = self.monitor.getTime()
+          if (xhrInstance.status !== 200) {
             if (xhrInstance._stopLog === true) return
-            if (!self.monitor) return
-            let time = self.monitor.getTime()
-            self.report('XMLHttpRequestError', {
+            self.reportError(
+              'xhrError',
+              0,
+              time,
+              new Error(
+                JSON.stringify({
+                  status: xhrInstance.status,
+                  statusText: xhrInstance.statusText,
+                  native: xhrInstance
+                })
+              )
+            )
+          } else {
+            self.limitReport('requestTime', 'requestTimeCount', 'requestTime', {
+              startTime: xhrInstance._startTime,
+              endTime: time,
               time: time,
-              error: {
-                status: xhrInstance.status,
-                statusText: xhrInstance.statusText,
-                native: xhrInstance
-              }
+              path: xhrInstance._url
             })
           }
         }
@@ -656,28 +735,33 @@ class MtError extends EventBus implements Mt.Plugin {
     if (!window.fetch) return
     if (self.native.fetch) return
     self.native.fetch = window.fetch
-    window.fetch = function (...arg) {
+    window.fetch = function (input: RequestInfo, init?: RequestInit) {
+      let startTime = self.monitor?.getTime()
+      let url = typeof input === 'string' ? input : input.url
       return self.native.fetch
-        .call(this, ...arg)
+        .call(this, input, init)
         .then((res: any) => {
+          if (!self.monitor) return
+          let time = self.monitor.getTime()
           if (!res.ok) {
-            // True if status is HTTP 2xx
-            // 上报错误
-            if (!self.monitor) return
-            let time = self.monitor.getTime()
-            self.report('FetchError', {
+            self.reportError('fetchError', 0, time, new Error(JSON.stringify(res)))
+          } else {
+            self.limitReport('requestTime', 'requestTimeCount', 'requestTime', {
+              startTime: startTime,
+              endTime: time,
               time: time,
-              error: res
+              path: url
             })
           }
           return res
         })
         .catch((error: any) => {
-          // 上报错误
-          if (!self.monitor) return
-          let time = self.monitor.getTime()
-          let stack = new Error(`FetchCatchError ${time}`).stack
-          error.stack = stack + '\n' + error.stack
+          let stack = []
+          if (error.stack) {
+            stack.push(error.stack)
+          }
+          stack.push(`FetchCatchError ${url}`)
+          error.stack = stack.join('\n')
           throw error
         })
     }

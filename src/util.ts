@@ -1,4 +1,3 @@
-import N from 'number-precision'
 export function subtraction (item: any, key1: string, key2: string): number {
   if (
     item[key1] &&
@@ -232,7 +231,7 @@ export function request (
         xhr.send(null)
       }
       if (method.toLowerCase() === 'post') {
-        let p = JSON.stringify(data)
+        let p = btoa(JSON.stringify(data))
         xhr.send(p)
       }
     } catch (error) {
@@ -306,15 +305,10 @@ let worker = makeWorker(function () {
   })
 })
 
-export function report (
-  url: string,
-  product: string,
-  uid: string,
-  data: any
-) {
+export function report (url: string, product: string, uid: string, data: any) {
   let q = ''
   try {
-    q = btoa(JSON.stringify(data))
+    q = JSON.stringify(data)
   } catch (error) {
     //
   }

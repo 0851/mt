@@ -27,6 +27,20 @@ declare class MtError extends EventBus implements Mt.Plugin {
   constructor(config: MtError.IConfig)
   apply(monitor: Mt): void
   broke(): void
+  limitReport (
+    key: MtError.logType,
+    countKey: MtError.logCountType,
+    type: IReportType,
+    payload: IErrorReport | IRequestTime
+  ): void 
+  forceReport (type?: MtError.logType): void 
+  reportError (
+    type: IReportType,
+    level: number,
+    time: number,
+    error: Error,
+    source?: IErrorReportSource
+  ): void
   addTrack(item: ITack): void
   recordTrack(): void
   unHijack(): void
@@ -54,4 +68,6 @@ declare namespace MtError {
     consoleErr?: boolean
     vue?: VueConstructor
   }
+  export type logType = 'high' | 'medium' | 'low' | 'requestTime'
+  export type logCountType = 'highCount' | 'mediumCount' | 'lowCount' | 'requestTimeCount'
 }
