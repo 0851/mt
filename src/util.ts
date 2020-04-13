@@ -12,8 +12,8 @@ export function subtraction (item: any, key1: string, key2: string): number {
 
 export function isReady (callback: Function) {
   let cb = function () {
-    setTimeout(() => {
-      callback()
+    setTimeout(function () {
+      callback && callback()
     })
   }
   if (document.addEventListener) {
@@ -231,7 +231,7 @@ export function request (
         xhr.send(null)
       }
       if (method.toLowerCase() === 'post') {
-        let p = btoa(JSON.stringify(data))
+        let p = JSON.stringify({ data: btoa(JSON.stringify(data)) })
         xhr.send(p)
       }
     } catch (error) {

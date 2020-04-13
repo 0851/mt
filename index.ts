@@ -6,12 +6,12 @@ import './index.styl'
 
 let monitor = new Mt({
   product: 'test',
-  uid: 'test'
-  // reportUrl: `http://${location.hostname}:8000/log`
+  uid: 'test',
+  reportUrl: `http://${location.hostname}:8000/log`
 })
 
 let fps = new MtFps()
-let err = new MtError(100000, 100, 10)
+let err = new MtError()
 let panel = new MtPanel(fps)
 
 monitor
@@ -29,3 +29,11 @@ monitor.run()
 //   }, 1000)
 //   console.log(content)
 // })
+// setTimeout(function () {
+//   console.log('=====')
+//   throw new Error('===++')
+// }, 1000)
+// function a () {
+//   throw new Error('===')
+// }
+// a()

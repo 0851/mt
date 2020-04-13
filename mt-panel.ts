@@ -2,7 +2,7 @@ import 'core-js/es6/array'
 import './src/panel/temp.styl'
 import temp from './src/panel/temp.pug'
 import EventBus from './event'
-import { isFunction, autoUnitSize, autoUnitMs } from './src/util'
+import { isFunction, autoUnitSize, autoUnitMs, isReady } from './src/util'
 import {
   ChartRender,
   ChartLineConfigFactory,

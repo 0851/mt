@@ -1,5 +1,4 @@
-import { subtraction, report, getTime, isReady } from './src/util'
-// import { setLocalStore } from './src/store'
+import { subtraction, report, getTime } from './src/util'
 import EventBus from './event'
 
 const PLUGIN_START = 'plugin:mount'
@@ -39,18 +38,16 @@ class Mt extends EventBus {
     report(this.reportUrl, this.product, this.uid, data)
   }
   run () {
-    isReady(() => {
-      let plugins = this.plugins
-      try {
-        this.getPerformance()
-      } catch (error) {
-        console.error('monitor error', error)
-      }
-      plugins.forEach(plugin => {
-        plugin.emit(PLUGIN_START, this)
-        plugin.apply(this)
-        plugin.emit(PLUGIN_END, this)
-      })
+    let plugins = this.plugins
+    try {
+      this.getPerformance()
+    } catch (error) {
+      console.error('monitor error', error)
+    }
+    plugins.forEach(plugin => {
+      plugin.emit(PLUGIN_START, this)
+      plugin.apply(this)
+      plugin.emit(PLUGIN_END, this)
     })
   }
   getEntriesPerformance (item: PerformanceResourceTiming): Mt.IPerformanceEntry {

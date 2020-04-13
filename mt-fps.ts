@@ -1,7 +1,7 @@
 import EventBus from './event'
-import { performancenow } from './src/util'
+import { performancenow, isReady } from './src/util'
 
-let requestAnimFrame = (function (): (callback: FrameRequestCallback) => number {
+function requestAnimation (): (callback: FrameRequestCallback) => number {
   return (
     window.requestAnimationFrame ||
     window.webkitRequestAnimationFrame ||
@@ -12,9 +12,9 @@ let requestAnimFrame = (function (): (callback: FrameRequestCallback) => number 
       return window.setTimeout(cb, 1000 / 60)
     }
   )
-})()
+}
 
-let cancelAnimationFrame = (function (): (handle: number) => void {
+function cancelAnimation (): (handle: number) => void {
   return (
     window.cancelAnimationFrame ||
     window.webkitCancelAnimationFrame ||
@@ -25,7 +25,7 @@ let cancelAnimationFrame = (function (): (handle: number) => void {
       return window.clearTimeout(handle)
     }
   )
-})()
+}
 
 class MtFps extends EventBus implements Mt.Plugin {
   lists: number[] = []
@@ -35,26 +35,37 @@ class MtFps extends EventBus implements Mt.Plugin {
   count: number
   timer?: number
   stoped: boolean = false
-  timeout: number
+  reportTime: number
+  sampleTime: number
   monitor?: Mt
-  constructor (count?: number, timeout?: number) {
+  constructor (count?: number, reportTime?: number, sampleTime?: number) {
     super()
     this.count = count || 10
-    this.timeout = timeout || 5000
+    this.reportTime = reportTime || 60 * 1000
+    this.sampleTime = sampleTime || 5000
   }
   apply (monitor: Mt): void {
-    this.monitor = monitor
-    this.lastTime = performancenow()
-    this.frame = 0
-    this.lastFameTime = performancenow()
-    this.lists = []
-    this.stoped = false
-    this.timer = requestAnimFrame(() => {
-      this.start()
+    let self = this
+    self.monitor = monitor
+    self.lastTime = performancenow()
+    self.frame = 0
+    self.lastFameTime = performancenow()
+    self.lists = []
+    self.stoped = false
+    self.timer = requestAnimation()(() => {
+      self.start()
     })
-    this.reportFps()
+    self.reportFps()
+    self.emitFps()
   }
-  reportFps () {
+  emitFps (): void {
+    if (!this.monitor) return
+    setTimeout(() => {
+      this.emit('fps:logs', this.lists)
+      this.emitFps()
+    }, this.sampleTime)
+  }
+  reportFps (): void {
     if (!this.monitor) return
     setTimeout(() => {
       this.monitor?.report({
@@ -63,24 +74,20 @@ class MtFps extends EventBus implements Mt.Plugin {
           fps: this.lists
         }
       })
-      this.emit('fps:logs', this.lists)
       this.reportFps()
-    }, this.timeout)
+    }, this.reportTime)
   }
   start () {
     if (!this.monitor) return
     try {
       if (this.stoped === true) {
         if (this.timer) {
-          cancelAnimationFrame(this.timer)
+          cancelAnimation()(this.timer)
         }
         return
       }
       let now = performancenow()
       this.frame++
-      // let fs = now - this.lastFameTime
-      // this.lastFameTime = now
-      // let fps = Math.round(1000 / fs)
       if (now - this.lastTime > 1000) {
         this.lists.push(this.frame)
         this.frame = 0
@@ -90,9 +97,9 @@ class MtFps extends EventBus implements Mt.Plugin {
         this.lists.splice(0, 1)
       }
       if (this.timer) {
-        cancelAnimationFrame(this.timer)
+        cancelAnimation()(this.timer)
       }
-      this.timer = requestAnimFrame(() => {
+      this.timer = requestAnimation()(() => {
         this.start()
       })
     } catch (error) {

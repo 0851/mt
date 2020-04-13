@@ -24,7 +24,7 @@ declare class MtError extends EventBus implements Mt.Plugin {
   monitor?: Mt
   config: MtError.IConfig
   consoleErr: boolean
-  constructor(config: MtError.IConfig)
+  constructor(config?: MtError.IConfig)
   apply(monitor: Mt): void
   broke(): void
   limitReport (

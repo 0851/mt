@@ -2,6 +2,7 @@ import 'core-js/es6/weak-map'
 import 'core-js/es6/map'
 import EventBus from './event'
 import { debounce, domPaths, getEl, makeWorker, request, isFunction } from './src/util'
+import { debug } from 'webpack'
 
 class MtError extends EventBus implements Mt.Plugin {
   tracks: ITack[] = []
@@ -28,9 +29,10 @@ class MtError extends EventBus implements Mt.Plugin {
   monitor?: Mt
   config: MtError.IConfig
   consoleErr: boolean
-  constructor (config: MtError.IConfig) {
+  constructor (config?: MtError.IConfig) {
     super()
     this.tracks = []
+    config = config || {}
     this.highCount = config.highCount === undefined ? 10 : config.highCount
     this.mediumCount = config.mediumCount === undefined ? 100 : config.mediumCount
     this.lowCount = config.lowCount === undefined ? 500 : config.lowCount
@@ -331,30 +333,28 @@ class MtError extends EventBus implements Mt.Plugin {
   }
   hijackConsole () {
     let self = this
-    setTimeout(function () {
-      self.native.consoleError = console.error
-      self.native.consoleWarn = console.warn
-      console.error = function (...arg: any[]) {
-        self.native.consoleError.call(this, ...arg)
-        if (!self.monitor) return
-        self.reportError(
-          'consoleError',
-          1,
-          self.monitor.getTime(),
-          new Error(self.argToStr(arg))
-        )
-      }
-      console.error = function (...arg: any[]) {
-        self.native.consoleWarn.call(this, ...arg)
-        if (!self.monitor) return
-        self.reportError(
-          'consoleWarn',
-          2,
-          self.monitor.getTime(),
-          new Error(self.argToStr(arg))
-        )
-      }
-    }, 0)
+    self.native.consoleError = console.error
+    self.native.consoleWarn = console.warn
+    console.error = function (...arg: any[]) {
+      self.native.consoleError.call(this, ...arg)
+      if (!self.monitor) return
+      self.reportError(
+        'consoleError',
+        1,
+        self.monitor.getTime(),
+        new Error(self.argToStr(arg))
+      )
+    }
+    console.error = function (...arg: any[]) {
+      self.native.consoleWarn.call(this, ...arg)
+      if (!self.monitor) return
+      self.reportError(
+        'consoleWarn',
+        2,
+        self.monitor.getTime(),
+        new Error(self.argToStr(arg))
+      )
+    }
   }
   unHijackVueError () {
     let self = this
@@ -368,16 +368,14 @@ class MtError extends EventBus implements Mt.Plugin {
   hijackVueError () {
     let self = this
     if (self.config.vue === undefined) return
-    setTimeout(function () {
-      if (self.config.vue === undefined) return
-      self.native.vueErrorHandler = self.config.vue.config.errorHandler
-      self.config.vue.config.errorHandler = function (err: Error, vm: Vue, info: string) {
-        self.native.vueErrorHandler.call(this, err, vm, info)
-        if (!self.monitor) return
-        err.message = err.message + `[el: ${getEl(vm.$el)}]` + `[info: ${info}]`
-        self.reportError('vueError', 1, self.monitor.getTime(), err)
-      }
-    }, 0)
+    if (self.config.vue === undefined) return
+    self.native.vueErrorHandler = self.config.vue.config.errorHandler
+    self.config.vue.config.errorHandler = function (err: Error, vm: Vue, info: string) {
+      self.native.vueErrorHandler.call(this, err, vm, info)
+      if (!self.monitor) return
+      err.message = err.message + `[el: ${getEl(vm.$el)}]` + `[info: ${info}]`
+      self.reportError('vueError', 1, self.monitor.getTime(), err)
+    }
   }
   private addEventListenerFn (old: any, weakmap: WeakMap<any, any>) {
     let self = this
@@ -385,8 +383,8 @@ class MtError extends EventBus implements Mt.Plugin {
       let eventListenerProxyFn = function (fn: any) {
         return function (...arg: any) {
           try {
-            if (!fn) {
-              return
+            if (!fn || !isFunction(fn)) {
+              return fn
             }
             return fn(...arg)
           } catch (error) {
@@ -520,21 +518,29 @@ class MtError extends EventBus implements Mt.Plugin {
     let fnKeys = ['setTimeout', 'setInterval', 'requestAnimationFrame']
     self.native.fns = new Map()
     fnKeys.forEach(function (key: string) {
-      let fn = (window as any)[key]
-      if (!fn) return
-      self.native.fns.set(key, fn)
-      ;(window as any)[key] = function (...arg: any) {
-        try {
-          return fn.call(this, ...arg)
-        } catch (error) {
-          let stack = []
-          if (error.stack) {
-            stack.push(error.stack)
+      let method = (window as any)[key]
+      if (!method) return
+      self.native.fns.set(key, method)
+      ;(window as any)[key] = function (handler: any, ...arg: any) {
+        let nHandler = function (fn: any) {
+          return function (...arg: any) {
+            try {
+              if (!fn || !isFunction(fn)) {
+                return fn
+              }
+              return fn(...arg)
+            } catch (error) {
+              let stack = []
+              if (error.stack) {
+                stack.push(error.stack)
+              }
+              stack.push(`ReFnError ${key}`)
+              error.stack = stack.join('\n')
+              throw error
+            }
           }
-          stack.push(`ReFnError ${key}`)
-          error.stack = stack.join('\n')
-          throw error
         }
+        return method.call(this, nHandler(handler), ...arg)
       }
     })
   }
@@ -590,38 +596,36 @@ class MtError extends EventBus implements Mt.Plugin {
       self.native.globalErrorListeners.get('unhandledrejection'),
       true
     )
-    setTimeout(function () {
-      self.native.globalErrorListeners.set('onerror', window.onerror)
-      window.onerror = function (
-        event: Event | string,
-        source?: string,
-        lineno?: number,
-        colno?: number,
-        error?: Error
-      ) {
-        if (!self.monitor) return
-        let time = self.monitor.getTime()
-        let message: any = event || error?.message
-        let stack: any = error?.stack || ''
-        error = error || new Error(message)
-        try {
-          let onerror = self.native.globalErrorListeners.get('onerror')
-          if (isFunction(onerror)) {
-            onerror(event, source, lineno, colno, error)
-          }
-        } catch (e) {
-          if (e.stack) {
-            stack = e.stack + '\n' + stack
-          }
+    self.native.globalErrorListeners.set('onerror', window.onerror)
+    window.onerror = function (
+      event: Event | string,
+      source?: string,
+      lineno?: number,
+      colno?: number,
+      error?: Error
+    ) {
+      if (!self.monitor) return
+      let time = self.monitor.getTime()
+      let message: any = event || error?.message
+      let stack: any = error?.stack || ''
+      error = error || new Error(message)
+      try {
+        let onerror = self.native.globalErrorListeners.get('onerror')
+        if (isFunction(onerror)) {
+          onerror(event, source, lineno, colno, error)
         }
-        error.stack = stack
-        self.reportError('windowError', 0, time, error, {
-          filename: source,
-          colno: colno,
-          lineno: lineno
-        })
+      } catch (e) {
+        if (e.stack) {
+          stack = e.stack + '\n' + stack
+        }
       }
-    }, 0)
+      error.stack = stack
+      self.reportError('windowError', 0, time, error, {
+        filename: source,
+        colno: colno,
+        lineno: lineno
+      })
+    }
   }
   unHijackXmlHttpRequest () {
     let self = this
