@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "outDir": "../dist/webpack",
+    "allowJs": true,
+    "target": "es5",
+    "moduleResolution": "Node",
+    "downlevelIteration": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strict": true,
+    "strictNullChecks": true
+  },
+  "include": [
+    "./webpack-loader.ts",
+    "./webpack-plugin.ts",
+    "./plugin.ts",
+    "./loader.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ]
+}

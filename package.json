@@ -1,0 +1,61 @@
+{
+  "name": "@ksyun/mt",
+  "version": "0.0.2",
+  "description": "> monitor frontend & error report > support plugin",
+  "main": "mt.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "concurrently -r --kill-others-on-fail  'npm run build-webpack-plugin-watch'",
+    "dev": "ksr dev -e index.html -p 8991 -h 0.0.0.0 --static ./ --polyfill false",
+    "build": "rm -rf dist && npm run build-main && npm run build-panel && npm run build-error && npm run build-fps && npm run build-event",
+    "build-index": "ksr build -e index.html:path=test/index.html --min false --polyfill false",
+    "build-main": "ksr build -e mt.ts:path=mt --hash false --library Mt --target umd --polyfill false",
+    "build-panel": "ksr build -e mt-panel.ts:path=mt-panel --hash false --library MtPanel --target umd --polyfill false",
+    "build-error": "ksr build -e mt-error.ts:path=mt-error --hash false --library MtError --target umd --polyfill false",
+    "build-fps": "ksr build -e mt-fps.ts:path=mt-fps --hash false --library MtFps --target umd --polyfill false",
+    "build-webpack-plugin": "tsc -p webpack/tsconfig-plugin.json",
+    "build-webpack-plugin-watch": "npm run build-webpack-plugin -- --watch",
+    "build-event": "ksr build -e event.ts:path=event --hash false --library EventBus --target umd --polyfill false",
+    "serve": "ksr-serve -h 0.0.0.0 -p 3601",
+    "fix-lint": "tslint -p tsconfig.json --fix",
+    "lint": "tslint -p tsconfig.json -t verbose",
+    "buildcommit": "npm run build && git add . && git commit -am 'build...'",
+    "release": "npm run buildcommit && npm run release-patch",
+    "prelease": "npm version prerelease && git push --tags --force && git push && npm publish --access public",
+    "release-patch": "npm version patch && git push --tags && git push && npm publish --access public",
+    "release-minor": "npm version minor && git push --tags && git push && npm publish --access public",
+    "release-major": "npm version major && git push --tags && git push && npm publish --access public"
+  },
+  "author": "wangjianliang",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^2.9.3",
+    "number-precision": "^1.3.2",
+    "typescript": "^3.8.3"
+  },
+  "devDependencies": {
+    "@types/chart.js": "^2.9.18",
+    "@types/webpack": "^4.41.10",
+    "concurrently": "^5.1.0",
+    "ksr": "^4.0.0",
+    "tslint": "^6.1.0",
+    "tslint-config-standard": "^9.0.0",
+    "vue": "^2.6.11",
+    "webpack": "^4.42.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0851/mt.git"
+  },
+  "keywords": [
+    "monitor",
+    "frontend",
+    "&",
+    "error",
+    "report"
+  ],
+  "bugs": {
+    "url": "https://github.com/0851/mt/issues"
+  },
+  "homepage": "https://github.com/0851/mt#readme"
+}
